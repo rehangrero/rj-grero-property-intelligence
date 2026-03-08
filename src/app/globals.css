@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Dark theme scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0f1e;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2dd4bf;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #c9a84c;
+}
+
+/* Firefox scrollbar styling */
+* {
+  scrollbar-color: #2dd4bf #0a0f1e;
+  scrollbar-width: thin;
+}
+
+*:hover {
+  scrollbar-color: #c9a84c #0a0f1e;
+}
+
+/* Base styles for dark theme */
+html {
+  color-scheme: dark;
+}
+
+body {
+  background-color: #0a0f1e;
+  color: #e0e0e0;
+}
