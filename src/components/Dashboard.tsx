@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   LineChart,
   Line,
@@ -25,6 +25,10 @@ import {
   Minus,
   ChevronDown,
   ChevronUp,
+  RefreshCw,
+  Clock,
+  X,
+  Database,
 } from 'lucide-react';
 import {
   dailySummary,
@@ -49,9 +53,86 @@ const FLAG_MAP: Record<string, string> = {
 
 type SortKey = 'price' | 'growth' | 'province';
 
+type NewsArticle = {
+  id: string;
+  headline: string;
+  summary: string;
+  source: string;
+  region: string;
+  timestamp: Date | string;
+  sentiment: 'positive' | 'negative' | 'neutral';
+  url?: string;
+  aiAnalysis: {
+    whatHappened: string;
+    whyItMatters: string;
+    propertyImpact: string;
+    sriLankaImplication: string;
+  };
+};
+
+type HistoryEntry = {
+  id: string;
+  fetchedAt: string;
+  source: string;
+  articleCount: number;
+  articles: NewsArticle[];
+};
+
 export default function Dashboard() {
   const [expandedNews, setExpandedNews] = useState<string | null>(null);
   const [districtSort, setDistrictSort] = useState<SortKey>('price');
+  const [news, setNews] = useState<NewsArticle[]>(propertyNews as NewsArticle[]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [newsSource, setNewsSource] = useState<string>('mock');
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [selectedHistory, setSelectedHistory] = useState<HistoryEntry | null>(null);
+
+  const fetchNews = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      const res = await fetch('/api/news');
+      const data = await res.json();
+      if (data.success && data.articles?.length > 0) {
+        const entry: HistoryEntry = {
+          id: Date.now().toString(),
+          fetchedAt: new Date().toISOString(),
+          source: data.source || 'mock',
+          articleCount: data.articles.length,
+          articles: data.articles,
+        };
+        setHistory(prev => {
+          const updated = [entry, ...prev].slice(0, 10);
+          try { localStorage.setItem('rjgrero_news_history', JSON.stringify(updated)); } catch {}
+          return updated;
+        });
+        setNews(data.articles);
+        setNewsSource(data.source || 'mock');
+        setLastUpdated(new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }));
+      }
+    } catch (err) {
+      console.error('Failed to fetch news:', err);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('rjgrero_news_history');
+      if (saved) {
+        const parsed: HistoryEntry[] = JSON.parse(saved);
+        setHistory(parsed);
+        if (parsed.length > 0) {
+          setNews(parsed[0].articles);
+          setNewsSource(parsed[0].source);
+          setLastUpdated(new Date(parsed[0].fetchedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }));
+        }
+      }
+    } catch {}
+    fetchNews();
+  }, [fetchNews]);
 
   const gaugeData = [
     { name: 'Sentiment', value: globalSentiment, fill: getSentimentColor(globalSentiment) },
@@ -502,54 +583,91 @@ export default function Dashboard() {
 
       {/* SECTION 5: News Intelligence Feed */}
       <div className="bg-[#141b2d] rounded-xl p-6 border border-gray-800">
-        <h3 className="text-lg font-bold text-white mb-6">Property News Intelligence</h3>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-lg font-bold text-white">Property News Intelligence</h3>
+            <div className="flex items-center gap-3 mt-1">
+              <span className={`px-2 py-0.5 rounded text-xs font-medium ${newsSource === 'gnews' ? 'bg-green-900/50 text-green-400' : 'bg-gray-800 text-gray-400'}`}>
+                {newsSource === 'gnews' ? '● Live — GNews' : '● Mock Data'}
+              </span>
+              {lastUpdated && (
+                <span className="flex items-center gap-1 text-gray-500 text-xs">
+                  <Clock className="w-3 h-3" /> Updated {lastUpdated}
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => { setSelectedHistory(null); setShowHistory(true); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0a0f1e] border border-gray-700/50 text-gray-400 hover:text-white text-xs rounded-lg transition-colors"
+            >
+              <Database className="w-3.5 h-3.5" />
+              History {history.length > 0 && <span className="bg-blue-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">{history.length}</span>}
+            </button>
+            <button
+              onClick={fetchNews}
+              disabled={isRefreshing}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#c9a84c] hover:bg-[#b8973b] text-black text-xs font-semibold rounded-lg transition-colors disabled:opacity-60"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+              {isRefreshing ? 'Refreshing...' : 'Refresh News'}
+            </button>
+          </div>
+        </div>
         <div className="grid grid-cols-3 gap-4">
-          {propertyNews.map((news) => (
-            <div key={news.id} className="bg-[#0a0f1e] rounded-lg p-4 border border-gray-700/50 flex flex-col">
+          {news.map((article) => (
+            <div key={article.id} className="bg-[#0a0f1e] rounded-lg p-4 border border-gray-700/50 flex flex-col">
               <div className="flex items-center gap-2 mb-3">
-                <div className={`w-2.5 h-2.5 rounded-full ${getSentimentDotColor(news.sentiment)} flex-shrink-0`} />
+                <div className={`w-2.5 h-2.5 rounded-full ${getSentimentDotColor(article.sentiment)} flex-shrink-0`} />
                 <span className="text-gray-500 text-xs">
-                  {new Date(news.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  {new Date(article.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                 </span>
               </div>
 
-              <h4 className="text-white font-bold text-sm mb-3 leading-tight">{news.headline}</h4>
+              <h4 className="text-white font-bold text-sm mb-3 leading-tight">{article.headline}</h4>
 
               <div className="flex flex-wrap gap-1.5 mb-3">
-                <span className="px-2 py-0.5 bg-blue-900/60 text-blue-200 text-xs rounded-full">{news.source}</span>
-                <span className="px-2 py-0.5 bg-purple-900/60 text-purple-200 text-xs rounded-full">{news.region}</span>
+                <span className="px-2 py-0.5 bg-blue-900/60 text-blue-200 text-xs rounded-full">{article.source}</span>
+                <span className="px-2 py-0.5 bg-purple-900/60 text-purple-200 text-xs rounded-full">{article.region}</span>
               </div>
 
-              <p className="text-gray-400 text-xs mb-3 flex-1 leading-relaxed">{news.summary}</p>
+              <p className="text-gray-400 text-xs mb-3 flex-1 leading-relaxed">{article.summary}</p>
+
+              {article.url && (
+                <a href={article.url} target="_blank" rel="noopener noreferrer" className="text-teal-500 hover:text-teal-400 text-xs mb-2 truncate">
+                  Read full article →
+                </a>
+              )}
 
               <button
-                onClick={() => setExpandedNews(expandedNews === news.id ? null : news.id)}
+                onClick={() => setExpandedNews(expandedNews === article.id ? null : article.id)}
                 className="flex items-center gap-1 text-teal-400 hover:text-teal-300 text-xs font-semibold transition-colors mt-auto"
               >
-                {expandedNews === news.id ? (
+                {expandedNews === article.id ? (
                   <>Hide AI Analysis <ChevronUp className="w-3 h-3" /></>
                 ) : (
                   <>View AI Analysis <ChevronDown className="w-3 h-3" /></>
                 )}
               </button>
 
-              {expandedNews === news.id && (
+              {expandedNews === article.id && (
                 <div className="mt-3 pt-3 border-t border-gray-700/50 space-y-2.5">
                   <div>
                     <p className="text-[#c9a84c] text-xs font-semibold mb-0.5">What Happened</p>
-                    <p className="text-gray-300 text-xs">{news.aiAnalysis.whatHappened}</p>
+                    <p className="text-gray-300 text-xs">{article.aiAnalysis.whatHappened}</p>
                   </div>
                   <div>
                     <p className="text-[#c9a84c] text-xs font-semibold mb-0.5">Why It Matters</p>
-                    <p className="text-gray-300 text-xs">{news.aiAnalysis.whyItMatters}</p>
+                    <p className="text-gray-300 text-xs">{article.aiAnalysis.whyItMatters}</p>
                   </div>
                   <div>
                     <p className="text-[#c9a84c] text-xs font-semibold mb-0.5">Property Impact</p>
-                    <p className="text-gray-300 text-xs">{news.aiAnalysis.propertyImpact}</p>
+                    <p className="text-gray-300 text-xs">{article.aiAnalysis.propertyImpact}</p>
                   </div>
                   <div>
                     <p className="text-teal-500 text-xs font-semibold mb-0.5">Sri Lanka Implication</p>
-                    <p className="text-gray-300 text-xs">{news.aiAnalysis.sriLankaImplication}</p>
+                    <p className="text-gray-300 text-xs">{article.aiAnalysis.sriLankaImplication}</p>
                   </div>
                 </div>
               )}
@@ -557,6 +675,94 @@ export default function Dashboard() {
           ))}
         </div>
       </div>
+
+      {/* HISTORY PANEL — slide-in from right */}
+      {showHistory && (
+        <div className="fixed inset-0 z-50 flex">
+          <div className="flex-1 bg-black/60 backdrop-blur-sm" onClick={() => { setShowHistory(false); setSelectedHistory(null); }} />
+          <div className="w-[480px] bg-[#0d1321] border-l border-gray-700 flex flex-col h-full overflow-hidden">
+            <div className="flex items-center justify-between p-5 border-b border-gray-800">
+              <div>
+                <h3 className="text-white font-bold">News History</h3>
+                <p className="text-gray-500 text-xs mt-0.5">Last {history.length} fetch snapshots saved locally</p>
+              </div>
+              <button onClick={() => { setShowHistory(false); setSelectedHistory(null); }} className="text-gray-500 hover:text-white transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {selectedHistory ? (
+              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                <div className="flex items-center gap-2 mb-4">
+                  <button onClick={() => setSelectedHistory(null)} className="text-teal-400 hover:text-teal-300 text-xs">← Back to list</button>
+                  <span className="text-gray-600 text-xs">·</span>
+                  <span className="text-gray-400 text-xs">{new Date(selectedHistory.fetchedAt).toLocaleString()}</span>
+                  <span className={`px-2 py-0.5 rounded text-xs ${selectedHistory.source === 'gnews' ? 'bg-green-900/50 text-green-400' : 'bg-gray-800 text-gray-400'}`}>
+                    {selectedHistory.source}
+                  </span>
+                </div>
+                {selectedHistory.articles.map((article, i) => (
+                  <div key={i} className="bg-[#141b2d] rounded-lg p-3 border border-gray-800">
+                    <p className="text-white text-sm font-semibold mb-1 leading-tight">{article.headline}</p>
+                    <p className="text-gray-400 text-xs mb-2">{article.summary}</p>
+                    <div className="flex gap-2">
+                      <span className="px-2 py-0.5 bg-blue-900/60 text-blue-200 text-xs rounded-full">{article.source}</span>
+                      <span className="px-2 py-0.5 bg-purple-900/60 text-purple-200 text-xs rounded-full">{article.region}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                {history.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Database className="w-8 h-8 text-gray-700 mx-auto mb-3" />
+                    <p className="text-gray-500 text-sm">No history yet</p>
+                    <p className="text-gray-600 text-xs mt-1">Click Refresh News to start saving snapshots</p>
+                  </div>
+                ) : (
+                  history.map((entry, i) => (
+                    <button
+                      key={entry.id}
+                      onClick={() => setSelectedHistory(entry)}
+                      className="w-full text-left bg-[#141b2d] hover:bg-[#1a2540] rounded-lg p-4 border border-gray-800 hover:border-gray-600 transition-colors"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-white text-sm font-semibold">
+                          Snapshot {history.length - i}
+                          {i === 0 && <span className="ml-2 px-1.5 py-0.5 bg-[#c9a84c]/20 text-[#c9a84c] text-xs rounded">Latest</span>}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded text-xs ${entry.source === 'gnews' ? 'bg-green-900/50 text-green-400' : 'bg-gray-800 text-gray-400'}`}>
+                          {entry.source === 'gnews' ? 'Live' : 'Mock'}
+                        </span>
+                      </div>
+                      <p className="text-gray-400 text-xs flex items-center gap-1.5">
+                        <Clock className="w-3 h-3" />
+                        {new Date(entry.fetchedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                      <p className="text-gray-500 text-xs mt-1">{entry.articleCount} articles saved</p>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+
+            {history.length > 0 && !selectedHistory && (
+              <div className="p-4 border-t border-gray-800">
+                <button
+                  onClick={() => {
+                    setHistory([]);
+                    try { localStorage.removeItem('rjgrero_news_history'); } catch {}
+                  }}
+                  className="w-full py-2 text-xs text-red-400 hover:text-red-300 border border-red-900/40 hover:border-red-700 rounded-lg transition-colors"
+                >
+                  Clear all history
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
