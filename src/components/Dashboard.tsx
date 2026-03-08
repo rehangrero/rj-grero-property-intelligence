@@ -35,6 +35,7 @@ import {
   risks,
   propertyNews,
   sriLankaData,
+  sriLankaDistrictPrices,
 } from '@/data/mockData';
 
 const FLAG_MAP: Record<string, string> = {
@@ -46,8 +47,11 @@ const FLAG_MAP: Record<string, string> = {
   'Sri Lanka': '🇱🇰',
 };
 
+type SortKey = 'price' | 'growth' | 'province';
+
 export default function Dashboard() {
   const [expandedNews, setExpandedNews] = useState<string | null>(null);
+  const [districtSort, setDistrictSort] = useState<SortKey>('price');
 
   const gaugeData = [
     { name: 'Sentiment', value: globalSentiment, fill: getSentimentColor(globalSentiment) },
@@ -99,6 +103,34 @@ export default function Dashboard() {
     if (sentiment === 'negative') return 'bg-red-500';
     return 'bg-gray-500';
   }
+
+  function getTierStyle(tier: string): string {
+    if (tier === 'premium') return 'border-[#c9a84c]/60 bg-[#c9a84c]/5';
+    if (tier === 'mid') return 'border-[#2dd4bf]/50 bg-[#2dd4bf]/5';
+    if (tier === 'emerging') return 'border-blue-500/50 bg-blue-500/5';
+    return 'border-gray-700/50 bg-[#0a0f1e]';
+  }
+
+  function getTierBadge(tier: string): string {
+    if (tier === 'premium') return 'bg-[#c9a84c]/20 text-[#c9a84c]';
+    if (tier === 'mid') return 'bg-teal-900/50 text-teal-300';
+    if (tier === 'emerging') return 'bg-blue-900/50 text-blue-300';
+    return 'bg-gray-800 text-gray-400';
+  }
+
+  const sortedDistricts = [...sriLankaDistrictPrices].sort((a, b) => {
+    if (districtSort === 'price') return b.priceUSD - a.priceUSD;
+    if (districtSort === 'growth') return b.yoyChange - a.yoyChange;
+    return a.province.localeCompare(b.province);
+  });
+
+  const provinces = districtSort === 'province'
+    ? [...new Set(sortedDistricts.map(d => d.province))]
+    : ['All'];
+
+  const topPrice = [...sriLankaDistrictPrices].sort((a, b) => b.priceUSD - a.priceUSD)[0];
+  const topGrowth = [...sriLankaDistrictPrices].sort((a, b) => b.yoyChange - a.yoyChange)[0];
+  const topHotspot = sriLankaDistrictPrices.filter(d => d.hotspot && d.tier === 'emerging').sort((a, b) => b.yoyChange - a.yoyChange)[0];
 
   // Prepare Sri Lanka chart data (reverse for chronological order)
   const tourismData = [...sriLankaData.tourismArrivals].reverse().map(d => ({ name: d.month.slice(0, 3), value: d.arrivals }));
@@ -347,7 +379,128 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* SECTION 4: News Intelligence Feed */}
+      {/* SECTION 4: Sri Lanka District Price Intelligence */}
+      <div className="bg-[#141b2d] rounded-xl p-6 border border-gray-800">
+        <div className="flex items-start justify-between mb-5">
+          <div>
+            <h3 className="text-lg font-bold text-white">Sri Lanka District Price Intelligence</h3>
+            <p className="text-gray-500 text-xs mt-1">Residential property · USD/sqft · Q1 2026 estimates</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {(['price', 'growth', 'province'] as SortKey[]).map((s) => (
+              <button
+                key={s}
+                onClick={() => setDistrictSort(s)}
+                className={`px-3 py-1.5 text-xs rounded-lg font-medium transition-colors ${
+                  districtSort === s
+                    ? 'bg-[#c9a84c] text-black'
+                    : 'bg-[#0a0f1e] text-gray-400 hover:text-white border border-gray-700/50'
+                }`}
+              >
+                {s === 'price' ? 'By Price' : s === 'growth' ? 'By Growth' : 'By Province'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Summary Stats */}
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="bg-[#0a0f1e] rounded-lg p-4 border border-[#c9a84c]/30">
+            <p className="text-gray-500 text-xs mb-1 uppercase tracking-wide">Highest Price</p>
+            <p className="text-[#c9a84c] text-xl font-bold">{topPrice.district}</p>
+            <p className="text-white text-sm font-medium">${topPrice.priceUSD}/sqft</p>
+            <p className="text-gray-500 text-xs">LKR {topPrice.priceLKR.toLocaleString()} · {topPrice.province}</p>
+          </div>
+          <div className="bg-[#0a0f1e] rounded-lg p-4 border border-green-900/40">
+            <p className="text-gray-500 text-xs mb-1 uppercase tracking-wide">Fastest Growing</p>
+            <p className="text-green-400 text-xl font-bold">{topGrowth.district}</p>
+            <p className="text-white text-sm font-medium">+{topGrowth.yoyChange}% YoY</p>
+            <p className="text-gray-500 text-xs">${topGrowth.priceUSD}/sqft · {topGrowth.province}</p>
+          </div>
+          <div className="bg-[#0a0f1e] rounded-lg p-4 border border-blue-900/40">
+            <p className="text-gray-500 text-xs mb-1 uppercase tracking-wide">Emerging Hotspot</p>
+            <p className="text-blue-400 text-xl font-bold">{topHotspot?.district}</p>
+            <p className="text-white text-sm font-medium">+{topHotspot?.yoyChange}% YoY</p>
+            <p className="text-gray-500 text-xs">${topHotspot?.priceUSD}/sqft · {topHotspot?.province}</p>
+          </div>
+        </div>
+
+        {/* Tier Legend */}
+        <div className="flex items-center gap-6 mb-5 pb-4 border-b border-gray-800">
+          {[
+            { tier: 'premium', label: 'Premium $50+', color: 'bg-[#c9a84c]' },
+            { tier: 'mid', label: 'Mid-Range $25–50', color: 'bg-[#2dd4bf]' },
+            { tier: 'emerging', label: 'Emerging $15–25', color: 'bg-blue-500' },
+            { tier: 'affordable', label: 'Affordable <$15', color: 'bg-gray-600' },
+          ].map(({ tier, label, color }) => (
+            <div key={tier} className="flex items-center gap-1.5">
+              <div className={`w-2.5 h-2.5 rounded-sm ${color}`} />
+              <span className="text-gray-400 text-xs">{label}</span>
+            </div>
+          ))}
+          <div className="ml-auto flex items-center gap-1.5">
+            <span className="text-yellow-400 text-xs">★</span>
+            <span className="text-gray-400 text-xs">Hotspot</span>
+          </div>
+        </div>
+
+        {/* District Grid */}
+        {districtSort === 'province' ? (
+          <div className="space-y-5">
+            {provinces.map(province => (
+              <div key={province}>
+                <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest mb-3">{province} Province</p>
+                <div className="grid grid-cols-5 gap-3">
+                  {sortedDistricts.filter(d => d.province === province).map(d => (
+                    <div key={d.district} className={`rounded-lg p-3 border ${getTierStyle(d.tier)}`}>
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-white font-semibold text-sm">{d.district}</p>
+                        {d.hotspot && <span className="text-yellow-400 text-xs">★</span>}
+                      </div>
+                      <p className="text-[#c9a84c] font-bold text-base">${d.priceUSD}</p>
+                      <p className="text-gray-500 text-xs">LKR {d.priceLKR.toLocaleString()}</p>
+                      <div className="flex items-center gap-1 mt-2">
+                        <span className={`text-xs font-semibold ${d.yoyChange >= 10 ? 'text-green-400' : d.yoyChange >= 6 ? 'text-teal-400' : 'text-gray-400'}`}>
+                          +{d.yoyChange}%
+                        </span>
+                        <span className="text-gray-600 text-xs">YoY</span>
+                      </div>
+                      <span className={`inline-block mt-1.5 px-1.5 py-0.5 rounded text-xs ${getTierBadge(d.tier)}`}>
+                        {d.tier}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-5 gap-3">
+            {sortedDistricts.map(d => (
+              <div key={d.district} className={`rounded-lg p-3 border ${getTierStyle(d.tier)}`}>
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-white font-semibold text-sm">{d.district}</p>
+                  {d.hotspot && <span className="text-yellow-400 text-xs">★</span>}
+                </div>
+                <p className="text-[#c9a84c] font-bold text-base">${d.priceUSD}<span className="text-gray-500 text-xs font-normal">/sqft</span></p>
+                <p className="text-gray-500 text-xs">LKR {d.priceLKR.toLocaleString()}</p>
+                <p className="text-gray-600 text-xs mt-0.5">{d.province}</p>
+                <div className="flex items-center gap-1 mt-2">
+                  <span className={`text-xs font-semibold ${d.yoyChange >= 10 ? 'text-green-400' : d.yoyChange >= 6 ? 'text-teal-400' : 'text-gray-400'}`}>
+                    +{d.yoyChange}%
+                  </span>
+                  <span className="text-gray-600 text-xs">YoY</span>
+                </div>
+                <span className={`inline-block mt-1.5 px-1.5 py-0.5 rounded text-xs ${getTierBadge(d.tier)}`}>
+                  {d.tier}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* SECTION 5: News Intelligence Feed */}
       <div className="bg-[#141b2d] rounded-xl p-6 border border-gray-800">
         <h3 className="text-lg font-bold text-white mb-6">Property News Intelligence</h3>
         <div className="grid grid-cols-3 gap-4">

@@ -595,6 +595,43 @@ export const dailySummary = {
     "Tourism surge combined with fiscal stability and falling mortgage rates creates optimal window for beachfront hospitality and mixed-use development investments",
 };
 
+export const sriLankaDistrictPrices = [
+  // Western Province
+  { district: 'Colombo', province: 'Western', priceUSD: 85, priceLKR: 28500, yoyChange: 12.5, trend: 'rising' as const, tier: 'premium' as const, hotspot: true },
+  { district: 'Gampaha', province: 'Western', priceUSD: 42, priceLKR: 14000, yoyChange: 8.2, trend: 'rising' as const, tier: 'mid' as const, hotspot: false },
+  { district: 'Kalutara', province: 'Western', priceUSD: 35, priceLKR: 11500, yoyChange: 6.8, trend: 'rising' as const, tier: 'mid' as const, hotspot: false },
+  // Southern Province
+  { district: 'Galle', province: 'Southern', priceUSD: 52, priceLKR: 17200, yoyChange: 18.5, trend: 'rising' as const, tier: 'premium' as const, hotspot: true },
+  { district: 'Matara', province: 'Southern', priceUSD: 32, priceLKR: 10500, yoyChange: 11.2, trend: 'rising' as const, tier: 'mid' as const, hotspot: false },
+  { district: 'Hambantota', province: 'Southern', priceUSD: 22, priceLKR: 7200, yoyChange: 7.8, trend: 'rising' as const, tier: 'emerging' as const, hotspot: false },
+  // Central Province
+  { district: 'Kandy', province: 'Central', priceUSD: 38, priceLKR: 12500, yoyChange: 9.1, trend: 'rising' as const, tier: 'mid' as const, hotspot: true },
+  { district: 'Nuwara Eliya', province: 'Central', priceUSD: 28, priceLKR: 9200, yoyChange: 14.3, trend: 'rising' as const, tier: 'emerging' as const, hotspot: true },
+  { district: 'Matale', province: 'Central', priceUSD: 18, priceLKR: 6000, yoyChange: 4.2, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false },
+  // Northern Province
+  { district: 'Jaffna', province: 'Northern', priceUSD: 25, priceLKR: 8200, yoyChange: 15.6, trend: 'rising' as const, tier: 'emerging' as const, hotspot: true },
+  { district: 'Kilinochchi', province: 'Northern', priceUSD: 9, priceLKR: 2900, yoyChange: 8.2, trend: 'rising' as const, tier: 'affordable' as const, hotspot: false },
+  { district: 'Mannar', province: 'Northern', priceUSD: 10, priceLKR: 3200, yoyChange: 3.5, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false },
+  { district: 'Vavuniya', province: 'Northern', priceUSD: 12, priceLKR: 4000, yoyChange: 6.1, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false },
+  { district: 'Mullaitivu', province: 'Northern', priceUSD: 8, priceLKR: 2600, yoyChange: 5.4, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false },
+  // Eastern Province
+  { district: 'Trincomalee', province: 'Eastern', priceUSD: 20, priceLKR: 6500, yoyChange: 12.8, trend: 'rising' as const, tier: 'emerging' as const, hotspot: true },
+  { district: 'Batticaloa', province: 'Eastern', priceUSD: 15, priceLKR: 4800, yoyChange: 7.3, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false },
+  { district: 'Ampara', province: 'Eastern', priceUSD: 13, priceLKR: 4200, yoyChange: 5.8, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false },
+  // North Western Province
+  { district: 'Kurunegala', province: 'North Western', priceUSD: 24, priceLKR: 7800, yoyChange: 7.9, trend: 'rising' as const, tier: 'emerging' as const, hotspot: false },
+  { district: 'Puttalam', province: 'North Western', priceUSD: 16, priceLKR: 5200, yoyChange: 5.2, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false },
+  // North Central Province
+  { district: 'Anuradhapura', province: 'North Central', priceUSD: 14, priceLKR: 4500, yoyChange: 6.4, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false },
+  { district: 'Polonnaruwa', province: 'North Central', priceUSD: 12, priceLKR: 3900, yoyChange: 4.8, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false },
+  // Sabaragamuwa Province
+  { district: 'Ratnapura', province: 'Sabaragamuwa', priceUSD: 19, priceLKR: 6200, yoyChange: 6.7, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false },
+  { district: 'Kegalle', province: 'Sabaragamuwa', priceUSD: 17, priceLKR: 5500, yoyChange: 5.5, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false },
+  // Uva Province
+  { district: 'Badulla', province: 'Uva', priceUSD: 16, priceLKR: 5100, yoyChange: 6.2, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false },
+  { district: 'Monaragala', province: 'Uva', priceUSD: 11, priceLKR: 3500, yoyChange: 4.1, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false },
+];
+
 export const marketMapData = [
   {
     country: "United Kingdom",
