@@ -64,3 +64,4 @@ src/
 │   └── mockData.ts
 └── lib/
 ```
+# RJ Grero Property Intelligence Dashboard
