@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { propertyNews } from '@/data/mockData';
 
-export const revalidate = 259200; // 3 days
+export const dynamic = 'force-dynamic'; // Always fetch fresh on every request
 
 export async function GET() {
   try {
@@ -25,7 +25,7 @@ export async function GET() {
     url.searchParams.append('apikey', apiKey);
 
     const response = await fetch(url.toString(), {
-      next: { revalidate: 259200 },
+      cache: 'no-store',
     });
 
     if (!response.ok) {
