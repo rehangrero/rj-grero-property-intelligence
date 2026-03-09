@@ -2,41 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Dark theme scrollbar styling */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #111; }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #4ade80; }
+* { scrollbar-color: #333 #111; scrollbar-width: thin; }
 
-::-webkit-scrollbar-track {
-  background: #0a0f1e;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #2dd4bf;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #c9a84c;
-}
-
-/* Firefox scrollbar styling */
-* {
-  scrollbar-color: #2dd4bf #0a0f1e;
-  scrollbar-width: thin;
-}
-
-*:hover {
-  scrollbar-color: #c9a84c #0a0f1e;
-}
-
-/* Base styles for dark theme */
-html {
-  color-scheme: dark;
-}
-
-body {
-  background-color: #0a0f1e;
-  color: #e0e0e0;
-}
+html { color-scheme: dark; }
+body { background-color: #0d0d0d; color: #e0e0e0; }

@@ -2,85 +2,125 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
-  Cell,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
+  AreaChart, Area, BarChart, Bar, LineChart, Line,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
 import {
-  ArrowUpRight,
-  ArrowDownRight,
-  Target,
-  AlertCircle,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  ChevronDown,
-  ChevronUp,
-  RefreshCw,
-  Clock,
-  X,
-  Database,
+  ArrowUpRight, ArrowDownRight, RefreshCw, Clock, X, Database,
+  Brain, Zap, ShieldAlert, Target, AlertCircle, Globe,
+  ChevronRight, Star, TrendingUp, TrendingDown, Minus,
 } from 'lucide-react';
 import {
-  dailySummary,
-  globalSentiment,
-  interestRates,
-  capitalFlows,
-  opportunities,
-  risks,
-  propertyNews,
-  sriLankaData,
-  sriLankaDistrictPrices,
+  interestRates, capitalFlows, opportunities, risks,
+  propertyNews, sriLankaData, sriLankaDistrictPrices, dailySummary, marketMapData,
 } from '@/data/mockData';
 
-const FLAG_MAP: Record<string, string> = {
-  'United States': '🇺🇸',
-  'United Kingdom': '🇬🇧',
-  'European Union': '🇪🇺',
-  'Australia': '🇦🇺',
-  'Singapore': '🇸🇬',
-  'Sri Lanka': '🇱🇰',
-};
-
-type SortKey = 'price' | 'growth' | 'province';
-
+// ── Types ─────────────────────────────────────────────────────────────────────
 type NewsArticle = {
-  id: string;
-  headline: string;
-  summary: string;
-  source: string;
-  region: string;
-  timestamp: Date | string;
-  sentiment: 'positive' | 'negative' | 'neutral';
+  id: string; headline: string; summary: string; source: string;
+  region: string; timestamp: Date | string; sentiment: 'positive' | 'negative' | 'neutral';
   url?: string;
-  aiAnalysis: {
-    whatHappened: string;
-    whyItMatters: string;
-    propertyImpact: string;
-    sriLankaImplication: string;
-  };
+  aiAnalysis: { whatHappened: string; whyItMatters: string; propertyImpact: string; sriLankaImplication: string };
 };
+type HistoryEntry = { id: string; fetchedAt: string; source: string; articleCount: number; articles: NewsArticle[] };
+type SortKey = 'price' | 'growth' | 'score';
 
-type HistoryEntry = {
-  id: string;
-  fetchedAt: string;
-  source: string;
-  articleCount: number;
-  articles: NewsArticle[];
-};
+// ── Theme constants ───────────────────────────────────────────────────────────
+const G = '#4ade80';
+const CARD = 'bg-[#161616] border border-[#222]';
+const CARD2 = 'bg-[#1a1a1a] border border-[#222]';
 
-export default function Dashboard() {
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const sentimentColour = (s: string) =>
+  s === 'positive' ? 'text-[#4ade80]' : s === 'negative' ? 'text-red-400' : 'text-yellow-400';
+
+const trendIcon = (t: string) =>
+  t === 'rising'  ? <ArrowUpRight size={12} className="text-[#4ade80]" /> :
+  t === 'falling' ? <ArrowDownRight size={12} className="text-red-400" /> :
+                    <Minus size={12} className="text-yellow-400" />;
+
+const tierBorder = (t: string) =>
+  t === 'premium'  ? 'border-purple-500/40 bg-purple-500/5' :
+  t === 'mid'      ? 'border-blue-500/40 bg-blue-500/5' :
+  t === 'emerging' ? 'border-[#4ade80]/40 bg-[#4ade80]/5' :
+                     'border-gray-700 bg-[#1a1a1a]';
+
+const tierBadge = (t: string) =>
+  t === 'premium'  ? 'bg-purple-500/20 text-purple-300' :
+  t === 'mid'      ? 'bg-blue-500/20 text-blue-300' :
+  t === 'emerging' ? 'bg-[#4ade80]/20 text-[#4ade80]' :
+                     'bg-gray-700 text-gray-400';
+
+const scoreColour = (s: number) =>
+  s >= 8 ? '#4ade80' : s >= 6 ? '#facc15' : s >= 4 ? '#fb923c' : '#f87171';
+
+const sentimentBg = (s: string) =>
+  s === 'positive' ? '#4ade80' : s === 'negative' ? '#f87171' : '#facc15';
+
+// ── Static AI data ────────────────────────────────────────────────────────────
+const aiInsights = [
+  { icon: '🏆', title: 'Top Buy Signal', body: 'Colombo 7 – Cinnamon Gardens remains the strongest capital preservation play. Limited supply, embassy-zone demand, and heritage asset scarcity sustain 14%+ YoY appreciation.', score: 9.1, action: 'STRONG BUY' },
+  { icon: '📈', title: 'Emerging Opportunity', body: 'Colombo 2 (Slave Island) is 25% underpriced relative to C3 proximity. Lake-facing plots command 30% uplift. Entry window narrowing as developers move in.', score: 8.7, action: 'BUY' },
+  { icon: '⚡', title: 'Growth Momentum', body: 'Galle district showing 18.5% YoY — highest in Southern Province. Expat demand + short-term rental yields (7–9%) make it a dual-income play.', score: 8.6, action: 'BUY' },
+  { icon: '🔄', title: 'Recovery Play', body: 'Jaffna land values accelerating at 15.6% YoY post-conflict recovery. Diaspora remittance-driven demand creating a structural floor. Early mover advantage window open.', score: 7.6, action: 'ACCUMULATE' },
+  { icon: '⚠️', title: 'Risk Watchlist', body: 'Hambantota and Northern Province remote districts: limited exit liquidity, illiquid secondary market. Land banking only — not suitable for short-term capital deployment.', score: 4.2, action: 'HOLD / AVOID' },
+];
+
+const riskMatrix = [
+  { label: 'Currency Depreciation', level: 65, colour: '#fb923c' },
+  { label: 'Liquidity Risk',        level: 45, colour: '#facc15' },
+  { label: 'Regulatory Risk',       level: 30, colour: '#4ade80' },
+  { label: 'Macro / Inflation',     level: 55, colour: '#fb923c' },
+  { label: 'Demand Risk',           level: 20, colour: '#4ade80' },
+  { label: 'Title / Legal Risk',    level: 40, colour: '#facc15' },
+];
+
+const marketSentimentData = [
+  { month: 'Oct', score: 58 }, { month: 'Nov', score: 62 }, { month: 'Dec', score: 70 },
+  { month: 'Jan', score: 67 }, { month: 'Feb', score: 75 }, { month: 'Mar', score: 81 },
+];
+
+// ── Sub-components ────────────────────────────────────────────────────────────
+function Section({ id, title, subtitle, children }: { id: string; title: string; subtitle?: string; children: React.ReactNode }) {
+  return (
+    <section id={id} className="mb-10 scroll-mt-20">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-1 h-6 bg-[#4ade80] rounded" />
+        <div>
+          <h2 className="text-white font-semibold text-base">{title}</h2>
+          {subtitle && <p className="text-gray-500 text-xs mt-0.5">{subtitle}</p>}
+        </div>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function StatCard({ label, value, sub, trend, colour }: {
+  label: string; value: string; sub?: string; trend?: 'up' | 'down' | 'flat'; colour?: string;
+}) {
+  return (
+    <div className={`${CARD} rounded-xl p-4`}>
+      <p className="text-[11px] text-gray-500 uppercase tracking-wider mb-1">{label}</p>
+      <p className={`text-2xl font-bold ${colour ?? 'text-white'}`}>{value}</p>
+      {sub && (
+        <p className={`text-xs mt-1 flex items-center gap-1 ${
+          trend === 'up' ? 'text-[#4ade80]' : trend === 'down' ? 'text-red-400' : 'text-gray-500'
+        }`}>
+          {trend === 'up' && <ArrowUpRight size={12} />}
+          {trend === 'down' && <ArrowDownRight size={12} />}
+          {sub}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
+export default function Dashboard({ activeSection }: { activeSection: string }) {
   const [expandedNews, setExpandedNews] = useState<string | null>(null);
-  const [districtSort, setDistrictSort] = useState<SortKey>('price');
+  const [districtSort, setDistrictSort] = useState<SortKey>('score');
+  const [colomboFilter, setColomboFilter] = useState<'all' | 'colombo' | 'other'>('all');
   const [news, setNews] = useState<NewsArticle[]>(propertyNews as NewsArticle[]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
@@ -88,6 +128,29 @@ export default function Dashboard() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [selectedHistory, setSelectedHistory] = useState<HistoryEntry | null>(null);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('rjgrero_news_history');
+      if (saved) setHistory(JSON.parse(saved));
+    } catch { /* noop */ }
+    fetchNews();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Scroll to section when sidebar tab changes
+  useEffect(() => {
+    if (!activeSection || activeSection === 'dashboard') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      // colombo-map section is embedded inside the district area
+      const targetId = activeSection === 'colombo-map' ? 'colombo-map' : activeSection;
+      setTimeout(() => {
+        const el = document.getElementById(targetId);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 50);
+    }
+  }, [activeSection]);
 
   const fetchNews = useCallback(async () => {
     setIsRefreshing(true);
@@ -98,669 +161,637 @@ export default function Dashboard() {
         const entry: HistoryEntry = {
           id: Date.now().toString(),
           fetchedAt: new Date().toISOString(),
-          source: data.source || 'mock',
+          source: data.source || 'unknown',
           articleCount: data.articles.length,
           articles: data.articles,
         };
+        setNews(data.articles);
+        setLastUpdated(new Date().toLocaleTimeString());
+        setNewsSource(data.source || 'mock');
         setHistory(prev => {
           const updated = [entry, ...prev].slice(0, 10);
-          try { localStorage.setItem('rjgrero_news_history', JSON.stringify(updated)); } catch {}
+          localStorage.setItem('rjgrero_news_history', JSON.stringify(updated));
           return updated;
         });
-        setNews(data.articles);
-        setNewsSource(data.source || 'mock');
-        setLastUpdated(new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }));
       }
-    } catch (err) {
-      console.error('Failed to fetch news:', err);
-    } finally {
-      setIsRefreshing(false);
-    }
+    } catch (e) { console.error(e); }
+    finally { setIsRefreshing(false); }
   }, []);
 
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('rjgrero_news_history');
-      if (saved) {
-        const parsed: HistoryEntry[] = JSON.parse(saved);
-        setHistory(parsed);
-        if (parsed.length > 0) {
-          setNews(parsed[0].articles);
-          setNewsSource(parsed[0].source);
-          setLastUpdated(new Date(parsed[0].fetchedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }));
-        }
-      }
-    } catch {}
-    fetchNews();
-  }, [fetchNews]);
+  // District data
+  const sortedDistricts = [...sriLankaDistrictPrices]
+    .filter(d => colomboFilter === 'all' ? true : colomboFilter === 'colombo' ? d.area === 'colombo' : d.area === 'other')
+    .sort((a, b) =>
+      districtSort === 'price'  ? b.priceUSD - a.priceUSD :
+      districtSort === 'growth' ? b.yoyChange - a.yoyChange :
+      (b.aiScore ?? 0) - (a.aiScore ?? 0)
+    );
 
-  const gaugeData = [
-    { name: 'Sentiment', value: globalSentiment, fill: getSentimentColor(globalSentiment) },
-    { name: 'Empty', value: 100 - globalSentiment, fill: '#1a1f2e' },
-  ];
+  const colomboDistricts = sriLankaDistrictPrices
+    .filter(d => d.area === 'colombo')
+    .sort((a, b) => b.priceUSD - a.priceUSD);
 
-  function getSentimentColor(value: number): string {
-    if (value < 20) return '#ef4444';
-    if (value < 40) return '#f97316';
-    if (value < 60) return '#eab308';
-    if (value < 80) return '#14b8a6';
-    return '#22c55e';
-  }
+  // Chart data derived from real mockData
+  const interestRateChart = interestRates.map(r => ({ name: r.country.substring(0, 4), rate: r.rate }));
+  const tourismChart = sriLankaData.tourismArrivals.slice(0, 6).reverse().map(t => ({ month: t.month.substring(0, 3), arrivals: Math.round(t.arrivals / 1000) }));
+  const mortgageChart = sriLankaData.mortgageRates.slice(0, 6).reverse().map(m => ({ month: m.month.substring(0, 3), rate: m.rate }));
+  const globalSentimentChart = marketMapData.map(m => ({
+    name: m.country.substring(0, 6),
+    score: m.sentiment === 'positive' ? 78 : m.sentiment === 'negative' ? 35 : 55,
+    sentiment: m.sentiment,
+  }));
 
-  function getSentimentLabel(value: number): string {
-    if (value < 20) return 'Very Negative';
-    if (value < 40) return 'Negative';
-    if (value < 60) return 'Neutral';
-    if (value < 80) return 'Positive';
-    return 'Very Positive';
-  }
-
-  function getTrendIcon(trend: string) {
-    if (trend === 'falling') return <TrendingDown className="w-4 h-4 text-green-500" />;
-    if (trend === 'rising') return <TrendingUp className="w-4 h-4 text-red-500" />;
-    return <Minus className="w-4 h-4 text-gray-500" />;
-  }
-
-  function getTrendColor(trend: string): string {
-    if (trend === 'falling') return 'text-green-400';
-    if (trend === 'rising') return 'text-red-400';
-    return 'text-gray-400';
-  }
-
-  function getSeverityColor(severity: string): string {
-    if (severity === 'high') return 'bg-red-900/80 text-red-200';
-    if (severity === 'medium') return 'bg-yellow-900/80 text-yellow-200';
-    return 'bg-green-900/80 text-green-200';
-  }
-
-  function getMagnitudeColor(magnitude: string): string {
-    if (magnitude === 'high') return 'bg-red-600';
-    if (magnitude === 'medium') return 'bg-yellow-600';
-    return 'bg-green-600';
-  }
-
-  function getSentimentDotColor(sentiment: string): string {
-    if (sentiment === 'positive') return 'bg-green-500';
-    if (sentiment === 'negative') return 'bg-red-500';
-    return 'bg-gray-500';
-  }
-
-  function getTierStyle(tier: string): string {
-    if (tier === 'premium') return 'border-[#c9a84c]/60 bg-[#c9a84c]/5';
-    if (tier === 'mid') return 'border-[#2dd4bf]/50 bg-[#2dd4bf]/5';
-    if (tier === 'emerging') return 'border-blue-500/50 bg-blue-500/5';
-    return 'border-gray-700/50 bg-[#0a0f1e]';
-  }
-
-  function getTierBadge(tier: string): string {
-    if (tier === 'premium') return 'bg-[#c9a84c]/20 text-[#c9a84c]';
-    if (tier === 'mid') return 'bg-teal-900/50 text-teal-300';
-    if (tier === 'emerging') return 'bg-blue-900/50 text-blue-300';
-    return 'bg-gray-800 text-gray-400';
-  }
-
-  const sortedDistricts = [...sriLankaDistrictPrices].sort((a, b) => {
-    if (districtSort === 'price') return b.priceUSD - a.priceUSD;
-    if (districtSort === 'growth') return b.yoyChange - a.yoyChange;
-    return a.province.localeCompare(b.province);
-  });
-
-  const provinces = districtSort === 'province'
-    ? [...new Set(sortedDistricts.map(d => d.province))]
-    : ['All'];
-
-  const topPrice = [...sriLankaDistrictPrices].sort((a, b) => b.priceUSD - a.priceUSD)[0];
-  const topGrowth = [...sriLankaDistrictPrices].sort((a, b) => b.yoyChange - a.yoyChange)[0];
-  const topHotspot = sriLankaDistrictPrices.filter(d => d.hotspot && d.tier === 'emerging').sort((a, b) => b.yoyChange - a.yoyChange)[0];
-
-  // Prepare Sri Lanka chart data (reverse for chronological order)
-  const tourismData = [...sriLankaData.tourismArrivals].reverse().map(d => ({ name: d.month.slice(0, 3), value: d.arrivals }));
-  const constructionData = [...sriLankaData.constructionIndex].reverse().map(d => ({ name: d.month.slice(0, 3), value: d.value }));
-  const mortgageData = [...sriLankaData.mortgageRates].reverse().map(d => ({ name: d.month.slice(0, 3), value: d.rate }));
-  const foreignBuyerData = [...sriLankaData.foreignBuyerSignals].reverse().map(d => ({ name: d.month.slice(0, 3), value: d.score }));
+  const displayNews = selectedHistory ? selectedHistory.articles : news;
 
   return (
-    <div className="min-h-screen p-6 space-y-6">
-      {/* SECTION 1: Daily Intelligence Summary */}
-      <div className="bg-[#141b2d] rounded-xl p-6 border border-gray-800">
-        <div className="flex items-start justify-between mb-6">
-          <div>
-            <h2 className="text-2xl font-bold text-white mb-1">Daily Property Intelligence</h2>
-            <p className="text-gray-400 text-sm">
-              {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-            </p>
+    <div className="p-6 min-h-screen bg-[#0d0d0d] text-white">
+
+      {/* ── OVERVIEW ─────────────────────────────────────────────────────── */}
+      <Section id="dashboard" title="Market Overview" subtitle="Real-time Sri Lanka property intelligence dashboard">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          <StatCard label="SL Market Score"  value="81/100"   sub="+6 pts MoM"      trend="up"   colour="text-[#4ade80]" />
+          <StatCard label="LKR / USD"        value="330.5"    sub="Stable ±0.3%"    trend="flat" />
+          <StatCard label="Colombo 7 PSF"    value="$150"     sub="+14.2% YoY"      trend="up"   colour="text-[#4ade80]" />
+          <StatCard label="SL Policy Rate"   value="9.5%"     sub="↓ from 10% (Q4)" trend="down" colour="text-yellow-400" />
+        </div>
+
+        {/* Key signals from dailySummary */}
+        <div className={`${CARD} rounded-xl p-4 mb-4`}>
+          <div className="flex items-center gap-2 mb-3">
+            <Zap size={13} className="text-[#4ade80]" />
+            <p className="text-xs text-gray-400 uppercase tracking-wider">Today's Key Signals</p>
           </div>
-          <div className="h-1 w-32 bg-gradient-to-r from-[#c9a84c] to-transparent rounded-full mt-3" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {dailySummary.keySignals.map((signal: string, i: number) => (
+              <div key={i} className={`${CARD2} rounded-lg p-3 flex items-start gap-2`}>
+                <ChevronRight size={12} className="text-[#4ade80] mt-0.5 shrink-0" />
+                <p className="text-xs text-gray-300">{signal}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 mb-6">
-          {dailySummary.keySignals.map((signal, idx) => (
-            <div key={idx} className="flex items-start space-x-3">
-              <div className="w-2 h-2 rounded-full bg-[#c9a84c] mt-2 flex-shrink-0" />
-              <p className="text-gray-300 text-sm">{signal}</p>
+        {/* SL opportunity banner */}
+        <div className="rounded-xl border border-[#4ade80]/20 bg-[#4ade80]/5 p-4">
+          <div className="flex items-start gap-3">
+            <Target size={16} className="text-[#4ade80] mt-0.5 shrink-0" />
+            <div>
+              <p className="text-xs font-semibold text-[#4ade80] uppercase tracking-wider mb-1">Sri Lanka Opportunity Window</p>
+              <p className="text-sm text-gray-300">{dailySummary.sriLankaOpportunity}</p>
             </div>
-          ))}
+          </div>
         </div>
+      </Section>
 
-        <div className="bg-[#0a0f1e] rounded-lg p-4 border border-teal-900/50">
-          <p className="text-xs text-teal-600 font-semibold mb-1 uppercase tracking-wide">Sri Lanka Opportunity</p>
-          <p className="text-teal-400 font-medium text-sm">{dailySummary.sriLankaOpportunity}</p>
-        </div>
-      </div>
+      {/* ── GLOBAL SIGNALS ────────────────────────────────────────────────── */}
+      <Section id="global-signals" title="Global Market Signals" subtitle="Cross-border sentiment and capital movement indicators">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className={`${CARD} rounded-xl p-4`}>
+            <p className="text-xs text-gray-400 mb-3 uppercase tracking-wider">Market Sentiment Index</p>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={globalSentimentChart} barSize={28}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+                <XAxis dataKey="name" tick={{ fill: '#666', fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis domain={[0, 100]} tick={{ fill: '#666', fontSize: 10 }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 8, fontSize: 12 }} />
+                <Bar dataKey="score" radius={[4, 4, 0, 0]}>
+                  {globalSentimentChart.map((entry, i) => (
+                    <Cell key={i} fill={sentimentBg(entry.sentiment)} opacity={0.85} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
 
-      {/* SECTION 2: Two-column grid */}
-      <div className="grid grid-cols-3 gap-6">
-        {/* LEFT COL */}
-        <div className="col-span-2 space-y-6">
-          {/* Interest Rate Tracker */}
-          <div className="bg-[#141b2d] rounded-xl p-6 border border-gray-800">
-            <h3 className="text-lg font-bold text-white mb-4">Global Interest Rate Tracker</h3>
-            <div className="grid grid-cols-3 gap-4">
-              {interestRates.map((item) => (
-                <div key={item.country} className="bg-[#0a0f1e] rounded-lg p-4 border border-gray-700/50">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-xl">{FLAG_MAP[item.country] || '🌍'}</span>
-                      <span className="text-white font-medium text-sm">{item.country}</span>
-                    </div>
-                    {getTrendIcon(item.trend)}
+          <div className="space-y-2">
+            {marketMapData.slice(0, 5).map((m, i) => (
+              <div key={i} className={`${CARD} rounded-xl p-3 flex items-center gap-3`}>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-white">{m.country}</p>
+                    <span className={`text-xs font-bold ${sentimentColour(m.sentiment)}`}>{m.sentiment.toUpperCase()}</span>
                   </div>
-                  <p className="text-2xl font-bold text-[#c9a84c] mb-1">{item.rate}%</p>
-                  <p className={`text-xs ${getTrendColor(item.trend)}`}>
-                    Previous: {item.previousRate}% · {item.trend === 'falling' ? '▼' : item.trend === 'stable' ? '–' : '▲'} {item.trend}
+                  <p className="text-xs text-gray-500 truncate mt-0.5">{m.headline}</p>
+                  <div className="mt-1.5 w-full bg-[#222] rounded-full h-1">
+                    <div className="h-1 rounded-full" style={{ width: m.sentiment === 'positive' ? '78%' : m.sentiment === 'negative' ? '35%' : '55%', background: sentimentBg(m.sentiment) }} />
+                  </div>
+                </div>
+                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${m.capitalFlow === 'inflow' ? 'bg-[#4ade80]/20 text-[#4ade80]' : 'bg-red-500/20 text-red-400'}`}>
+                  {m.capitalFlow === 'inflow' ? '↑ INFLOW' : '↓ OUTFLOW'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Section>
+
+      {/* ── SRI LANKA INTEL ───────────────────────────────────────────────── */}
+      <Section id="sri-lanka" title="Sri Lanka Market Intelligence" subtitle="Macro indicators, tourism data, and construction trends">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          <div className={`${CARD} rounded-xl p-4`}>
+            <p className="text-[11px] text-gray-500 uppercase tracking-wider mb-1">Tourism Arrivals</p>
+            <p className="text-xl font-bold text-white">250K</p>
+            <p className="text-xs text-[#4ade80] mt-1 flex items-center gap-1"><ArrowUpRight size={12} />Mar 2026 peak</p>
+          </div>
+          <div className={`${CARD} rounded-xl p-4`}>
+            <p className="text-[11px] text-gray-500 uppercase tracking-wider mb-1">Construction Index</p>
+            <p className="text-xl font-bold text-white">68</p>
+            <p className="text-xs text-[#4ade80] mt-1 flex items-center gap-1"><ArrowUpRight size={12} />+13 YoY</p>
+          </div>
+          <div className={`${CARD} rounded-xl p-4`}>
+            <p className="text-[11px] text-gray-500 uppercase tracking-wider mb-1">Mortgage Rate</p>
+            <p className="text-xl font-bold text-white">9.5%</p>
+            <p className="text-xs text-[#4ade80] mt-1 flex items-center gap-1"><ArrowDownRight size={12} />↓ from 10.4%</p>
+          </div>
+          <div className={`${CARD} rounded-xl p-4`}>
+            <p className="text-[11px] text-gray-500 uppercase tracking-wider mb-1">Foreign Buyer Score</p>
+            <p className="text-xl font-bold text-white">78/100</p>
+            <p className="text-xs text-[#4ade80] mt-1 flex items-center gap-1"><ArrowUpRight size={12} />+40 pts YoY</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className={`${CARD} rounded-xl p-4`}>
+            <p className="text-xs text-gray-400 mb-3 uppercase tracking-wider">Monthly Tourism Arrivals (000s)</p>
+            <ResponsiveContainer width="100%" height={180}>
+              <AreaChart data={tourismChart}>
+                <defs>
+                  <linearGradient id="tourGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={G} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={G} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+                <XAxis dataKey="month" tick={{ fill: '#666', fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: '#666', fontSize: 11 }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 8, fontSize: 12 }} formatter={(v) => [`${v}K arrivals`]} />
+                <Area type="monotone" dataKey="arrivals" stroke={G} fill="url(#tourGrad)" strokeWidth={2} dot={false} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+          <div className={`${CARD} rounded-xl p-4`}>
+            <p className="text-xs text-gray-400 mb-3 uppercase tracking-wider">Mortgage Rate Trend (%)</p>
+            <ResponsiveContainer width="100%" height={180}>
+              <LineChart data={mortgageChart}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+                <XAxis dataKey="month" tick={{ fill: '#666', fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis domain={[9, 11]} tick={{ fill: '#666', fontSize: 11 }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 8, fontSize: 12 }} formatter={(v) => [`${v}%`]} />
+                <Line type="monotone" dataKey="rate" stroke="#fb923c" strokeWidth={2} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </Section>
+
+      {/* ── COLOMBO 1–10 MAP ──────────────────────────────────────────────── */}
+      <Section id="colombo-map" title="Colombo District Price Map" subtitle="Granular pricing intelligence — Colombo 1 through 10">
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className={`${CARD} rounded-xl p-4 text-center`}>
+            <p className="text-[10px] text-gray-500 uppercase tracking-wider">Highest PSF</p>
+            <p className="text-2xl font-bold text-[#4ade80] mt-1">$150</p>
+            <p className="text-xs text-gray-500 mt-0.5">Colombo 7</p>
+          </div>
+          <div className={`${CARD} rounded-xl p-4 text-center`}>
+            <p className="text-[10px] text-gray-500 uppercase tracking-wider">Avg YoY Growth</p>
+            <p className="text-2xl font-bold text-[#4ade80] mt-1">+11.0%</p>
+            <p className="text-xs text-gray-500 mt-0.5">Across all 10 districts</p>
+          </div>
+          <div className={`${CARD} rounded-xl p-4 text-center`}>
+            <p className="text-[10px] text-gray-500 uppercase tracking-wider">Best AI Score</p>
+            <p className="text-2xl font-bold text-[#4ade80] mt-1">9.1</p>
+            <p className="text-xs text-gray-500 mt-0.5">Colombo 7</p>
+          </div>
+        </div>
+
+        <div className={`${CARD} rounded-xl p-4 mb-4`}>
+          <p className="text-xs text-gray-400 mb-3 uppercase tracking-wider">Price per sqft (USD)</p>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={colomboDistricts.map(d => ({ name: d.district.split('–')[0].trim(), price: d.priceUSD }))} barSize={30}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+              <XAxis dataKey="name" tick={{ fill: '#666', fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#666', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 8, fontSize: 12 }} formatter={(v) => [`$${v}/sqft`]} />
+              <Bar dataKey="price" radius={[4, 4, 0, 0]}>
+                {colomboDistricts.map((_, i) => (
+                  <Cell key={i} fill={i === 0 ? '#4ade80' : i <= 2 ? '#22c55e' : i <= 5 ? '#16a34a' : '#166534'} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {colomboDistricts.map((d, i) => (
+            <div key={i} className={`rounded-xl border p-4 ${tierBorder(d.tier)}`}>
+              <div className="flex items-start justify-between mb-2">
+                <div>
+                  <p className="text-sm font-semibold text-white">{d.district}</p>
+                  <p className="text-[11px] text-gray-500">{d.province} Province</p>
+                </div>
+                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${tierBadge(d.tier)}`}>{d.tier.toUpperCase()}</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 my-2">
+                <div><p className="text-[10px] text-gray-500">USD/sqft</p><p className="text-sm font-bold text-white">${d.priceUSD}</p></div>
+                <div><p className="text-[10px] text-gray-500">LKR/sqft</p><p className="text-sm font-bold text-white">{d.priceLKR.toLocaleString()}</p></div>
+                <div>
+                  <p className="text-[10px] text-gray-500">YoY</p>
+                  <p className={`text-sm font-bold flex items-center gap-0.5 ${d.yoyChange > 0 ? 'text-[#4ade80]' : 'text-red-400'}`}>
+                    {trendIcon(d.trend)}{d.yoyChange}%
                   </p>
                 </div>
+              </div>
+              <div className="mb-2">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-[10px] text-gray-500">AI Score</span>
+                  <span className="text-[11px] font-bold" style={{ color: scoreColour(d.aiScore ?? 5) }}>{d.aiScore ?? 5} / 10</span>
+                </div>
+                <div className="w-full bg-[#222] rounded-full h-1.5">
+                  <div className="h-1.5 rounded-full" style={{ width: `${((d.aiScore ?? 5) / 10) * 100}%`, background: scoreColour(d.aiScore ?? 5) }} />
+                </div>
+              </div>
+              {d.notes && <p className="text-[11px] text-gray-500 italic leading-relaxed">{d.notes}</p>}
+              {d.hotspot && (
+                <div className="mt-2 flex items-center gap-1">
+                  <Star size={10} className="text-yellow-400" />
+                  <span className="text-[10px] text-yellow-400 font-medium">AI-flagged hotspot</span>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      {/* ── ALL DISTRICTS ─────────────────────────────────────────────────── */}
+      <Section id="sri-lanka-districts" title="All District Price Intelligence" subtitle="Full Sri Lanka coverage — 25 districts with AI scoring">
+        <div className="flex flex-wrap gap-2 mb-4">
+          <div className="flex bg-[#1a1a1a] border border-[#222] rounded-lg p-0.5">
+            {(['all', 'colombo', 'other'] as const).map(f => (
+              <button key={f} onClick={() => setColomboFilter(f)}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${colomboFilter === f ? 'bg-[#4ade80]/20 text-[#4ade80]' : 'text-gray-500 hover:text-gray-300'}`}>
+                {f === 'all' ? 'All Districts' : f === 'colombo' ? 'Colombo 1–10' : 'Other Districts'}
+              </button>
+            ))}
+          </div>
+          <div className="flex bg-[#1a1a1a] border border-[#222] rounded-lg p-0.5 ml-auto">
+            {(['score', 'price', 'growth'] as const).map(s => (
+              <button key={s} onClick={() => setDistrictSort(s)}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${districtSort === s ? 'bg-[#4ade80]/20 text-[#4ade80]' : 'text-gray-500 hover:text-gray-300'}`}>
+                {s === 'score' ? 'AI Score' : s === 'price' ? 'By Price' : 'By Growth'}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {sortedDistricts.map((d, i) => (
+            <div key={i} className={`rounded-xl border p-3 ${tierBorder(d.tier)}`}>
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-sm font-semibold text-white">{d.district}</p>
+                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${tierBadge(d.tier)}`}>{d.tier.toUpperCase()}</span>
+              </div>
+              <p className="text-[10px] text-gray-500 mb-2">{d.province}</p>
+              <div className="grid grid-cols-3 gap-1">
+                <div><p className="text-[9px] text-gray-600">USD/sqft</p><p className="text-xs font-bold text-white">${d.priceUSD}</p></div>
+                <div>
+                  <p className="text-[9px] text-gray-600">YoY</p>
+                  <p className={`text-xs font-bold flex items-center gap-0.5 ${d.yoyChange > 0 ? 'text-[#4ade80]' : 'text-red-400'}`}>
+                    {trendIcon(d.trend)}{d.yoyChange}%
+                  </p>
+                </div>
+                <div><p className="text-[9px] text-gray-600">AI Score</p><p className="text-xs font-bold" style={{ color: scoreColour(d.aiScore ?? 5) }}>{d.aiScore ?? '–'}</p></div>
+              </div>
+              {d.hotspot && <div className="mt-2 flex items-center gap-1"><Star size={9} className="text-yellow-400" /><span className="text-[9px] text-yellow-400">Hotspot</span></div>}
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      {/* ── INTEREST RATES ────────────────────────────────────────────────── */}
+      <Section id="interest-rates" title="Interest Rates & Monetary Policy" subtitle="Global central bank rates affecting property financing">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className={`${CARD} rounded-xl p-4`}>
+            <p className="text-xs text-gray-400 mb-3 uppercase tracking-wider">Policy Rate Comparison (%)</p>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={interestRateChart} layout="vertical" barSize={18}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#222" horizontal={false} />
+                <XAxis type="number" tick={{ fill: '#666', fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis dataKey="name" type="category" tick={{ fill: '#999', fontSize: 11 }} axisLine={false} tickLine={false} width={32} />
+                <Tooltip contentStyle={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 8, fontSize: 12 }} formatter={(v) => [`${v}%`]} />
+                <Bar dataKey="rate" fill={G} radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="space-y-2">
+            {interestRates.map((r, i) => (
+              <div key={i} className={`${CARD} rounded-xl p-3 flex items-center gap-3`}>
+                <div className="w-9 h-9 rounded-lg bg-[#222] flex items-center justify-center text-xs font-bold text-white shrink-0">
+                  {r.country.substring(0, 2).toUpperCase()}
+                </div>
+                <div className="flex-1">
+                  <div className="flex justify-between">
+                    <p className="text-sm font-medium text-white">{r.country}</p>
+                    <p className="text-sm font-bold text-[#4ade80]">{r.rate}%</p>
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className={`text-[10px] ${(r.trend as string) === 'falling' ? 'text-[#4ade80]' : (r.trend as string) === 'rising' ? 'text-red-400' : 'text-gray-500'}`}>
+                      {(r.trend as string) === 'falling' ? '↓ Falling' : (r.trend as string) === 'rising' ? '↑ Rising' : '→ Stable'}
+                    </span>
+                    <span className="text-[10px] text-gray-600">Prev: {r.previousRate}%</span>
+                    <span className="text-[10px] text-gray-600">{r.currency}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Section>
+
+      {/* ── CAPITAL FLOWS ─────────────────────────────────────────────────── */}
+      <Section id="capital-flows" title="Capital Flows & FDI Tracker" subtitle="Foreign capital movement into global property markets">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {capitalFlows.map((c, i) => (
+            <div key={i} className={`${CARD} rounded-xl p-4 flex items-start gap-3`}>
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${c.direction === 'inflow' ? 'bg-[#4ade80]/10' : 'bg-red-500/10'}`}>
+                {c.direction === 'inflow'
+                  ? <TrendingUp size={16} className="text-[#4ade80]" />
+                  : <TrendingDown size={16} className="text-red-400" />}
+              </div>
+              <div className="flex-1">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm font-semibold text-white">{c.signal}</p>
+                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${c.magnitude === 'high' ? 'bg-[#4ade80]/20 text-[#4ade80]' : 'bg-yellow-500/20 text-yellow-400'}`}>
+                    {c.magnitude?.toUpperCase()}
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-500 mt-0.5">{c.region}</p>
+                <p className="text-xs text-gray-500 mt-1">{c.description}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      {/* ── RISK MONITOR ──────────────────────────────────────────────────── */}
+      <Section id="risk-monitor" title="Risk Monitor" subtitle="Macro and property-specific risk exposure across key markets">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className={`${CARD} rounded-xl p-4`}>
+            <p className="text-xs text-gray-400 mb-4 uppercase tracking-wider">Sri Lanka Risk Matrix</p>
+            <div className="space-y-3">
+              {riskMatrix.map((r, i) => (
+                <div key={i}>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-gray-400">{r.label}</span>
+                    <span style={{ color: r.colour }} className="font-medium">{r.level}%</span>
+                  </div>
+                  <div className="w-full bg-[#222] rounded-full h-2">
+                    <div className="h-2 rounded-full" style={{ width: `${r.level}%`, background: r.colour }} />
+                  </div>
+                </div>
               ))}
             </div>
           </div>
-
-          {/* Property Sentiment Gauge */}
-          <div className="bg-[#141b2d] rounded-xl p-6 border border-gray-800">
-            <h3 className="text-lg font-bold text-white mb-4">Global Property Sentiment</h3>
-            <div className="flex items-center justify-center">
-              <div className="relative" style={{ width: 280, height: 160 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={gaugeData}
-                      cx="50%"
-                      cy="100%"
-                      startAngle={180}
-                      endAngle={0}
-                      innerRadius={70}
-                      outerRadius={95}
-                      dataKey="value"
-                      stroke="none"
-                    >
-                      {gaugeData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-center">
-                  <p className="text-4xl font-bold text-white">{globalSentiment}</p>
-                  <p className="text-xs text-gray-400 mt-1">{getSentimentLabel(globalSentiment)}</p>
+          <div className="space-y-2">
+            {risks.map((r, i) => (
+              <div key={i} className={`${CARD} rounded-xl p-3`}>
+                <div className="flex items-start gap-2">
+                  <AlertCircle size={13} className={`shrink-0 mt-0.5 ${r.severity === 'high' ? 'text-red-400' : r.severity === 'medium' ? 'text-yellow-400' : 'text-[#4ade80]'}`} />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-white">{r.title}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{r.description}</p>
+                    <p className="text-[10px] text-gray-600 mt-0.5">{r.region} · {r.category}</p>
+                  </div>
+                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                    r.severity === 'high' ? 'bg-red-500/20 text-red-400' :
+                    r.severity === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                    'bg-[#4ade80]/20 text-[#4ade80]'}`}>{r.severity?.toUpperCase()}</span>
                 </div>
               </div>
+            ))}
+          </div>
+        </div>
+      </Section>
+
+      {/* ── OPPORTUNITIES ─────────────────────────────────────────────────── */}
+      <Section id="opportunities" title="Acquisition Opportunities" subtitle="Screened, scored, and AI-ranked live investment targets">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {opportunities.map((o, i) => (
+            <div key={i} className={`${CARD} rounded-xl p-4`}>
+              <div className="flex items-start justify-between mb-2">
+                <div>
+                  <p className="text-sm font-semibold text-white">{o.title}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{o.region} · {o.category}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-[10px] text-gray-500">Confidence</p>
+                  <p className="text-base font-bold" style={{ color: scoreColour((o.confidence / 10)) }}>{o.confidence}%</p>
+                </div>
+              </div>
+              <div className="w-full bg-[#222] rounded-full h-1 mb-3">
+                <div className="h-1 rounded-full bg-[#4ade80]" style={{ width: `${o.confidence}%` }} />
+              </div>
+              <p className="text-xs text-gray-500 leading-relaxed">{o.description}</p>
             </div>
+          ))}
+        </div>
+      </Section>
+
+      {/* ── AI INTELLIGENCE ───────────────────────────────────────────────── */}
+      <Section id="ai-analysis" title="AI Intelligence Panel" subtitle="Machine-learning driven property insights, deal scoring, and risk assessment">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+          {/* Sentiment gauge */}
+          <div className={`${CARD} rounded-xl p-4`}>
+            <div className="flex items-center gap-2 mb-3">
+              <Brain size={14} className="text-[#4ade80]" />
+              <p className="text-xs text-gray-400 uppercase tracking-wider">AI Market Sentiment</p>
+            </div>
+            <div className="flex items-end gap-2 mb-3">
+              <p className="text-4xl font-bold text-[#4ade80]">81</p>
+              <p className="text-sm text-gray-500 mb-1">/ 100</p>
+            </div>
+            <p className="text-xs text-gray-500 mb-3 leading-relaxed">BULLISH — Property market entering recovery phase. Diaspora capital + rate cuts creating demand surge.</p>
+            <ResponsiveContainer width="100%" height={80}>
+              <AreaChart data={marketSentimentData}>
+                <defs>
+                  <linearGradient id="aiGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={G} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={G} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <Area type="monotone" dataKey="score" stroke={G} fill="url(#aiGrad)" strokeWidth={2} dot={false} />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
 
-          {/* Capital Flow Tracker */}
-          <div className="bg-[#141b2d] rounded-xl p-6 border border-gray-800">
-            <h3 className="text-lg font-bold text-white mb-4">Capital Flow Signals</h3>
-            <div className="space-y-3">
-              {capitalFlows.map((flow) => (
-                <div key={flow.id} className="flex items-center space-x-4 bg-[#0a0f1e] rounded-lg p-4 border border-gray-700/50">
-                  <div className="flex-shrink-0">
-                    {flow.direction === 'inflow' ? (
-                      <ArrowUpRight className="w-5 h-5 text-green-500" />
-                    ) : (
-                      <ArrowDownRight className="w-5 h-5 text-red-500" />
+          {/* Deal signals */}
+          <div className={`${CARD} rounded-xl p-4 lg:col-span-2`}>
+            <div className="flex items-center gap-2 mb-3">
+              <Zap size={14} className="text-[#4ade80]" />
+              <p className="text-xs text-gray-400 uppercase tracking-wider">Live Deal Signals</p>
+            </div>
+            <div className="space-y-2">
+              {aiInsights.map((insight, i) => (
+                <div key={i} className={`${CARD2} rounded-lg p-3 flex items-start gap-3`}>
+                  <span className="text-base mt-0.5">{insight.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <p className="text-xs font-semibold text-white">{insight.title}</p>
+                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0 ml-2 ${
+                        insight.action === 'STRONG BUY' ? 'bg-[#4ade80]/20 text-[#4ade80]' :
+                        insight.action === 'BUY' ? 'bg-blue-500/20 text-blue-400' :
+                        insight.action === 'ACCUMULATE' ? 'bg-yellow-500/20 text-yellow-400' :
+                        'bg-red-500/20 text-red-400'}`}>{insight.action}</span>
+                    </div>
+                    <p className="text-[11px] text-gray-500 leading-relaxed">{insight.body}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-[9px] text-gray-600">Score</p>
+                    <p className="text-sm font-bold" style={{ color: scoreColour(insight.score) }}>{insight.score}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Risk matrix */}
+        <div className={`${CARD} rounded-xl p-4`}>
+          <div className="flex items-center gap-2 mb-4">
+            <ShieldAlert size={14} className="text-[#4ade80]" />
+            <p className="text-xs text-gray-400 uppercase tracking-wider">AI Risk Matrix — Sri Lanka Property</p>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {riskMatrix.map((r, i) => (
+              <div key={i} className={`${CARD2} rounded-lg p-3`}>
+                <p className="text-[11px] text-gray-400 mb-2">{r.label}</p>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 bg-[#222] rounded-full h-2">
+                    <div className="h-2 rounded-full" style={{ width: `${r.level}%`, background: r.colour }} />
+                  </div>
+                  <span className="text-xs font-bold shrink-0" style={{ color: r.colour }}>{r.level}%</span>
+                </div>
+                <p className="text-[10px] text-gray-600 mt-1">{r.level < 35 ? 'Low risk' : r.level < 60 ? 'Moderate' : 'Elevated'}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Section>
+
+      {/* ── NEWS FEED ─────────────────────────────────────────────────────── */}
+      <Section id="news-feed" title="Property News Feed" subtitle="Live intelligence from global property markets">
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <button onClick={fetchNews} disabled={isRefreshing}
+            className="flex items-center gap-2 px-4 py-2 bg-[#4ade80]/20 hover:bg-[#4ade80]/30 border border-[#4ade80]/40 rounded-lg text-[#4ade80] text-xs font-semibold transition-all disabled:opacity-50">
+            <RefreshCw size={12} className={isRefreshing ? 'animate-spin' : ''} />
+            {isRefreshing ? 'Fetching...' : 'Refresh News'}
+          </button>
+          <button onClick={() => setShowHistory(!showHistory)}
+            className="flex items-center gap-2 px-4 py-2 bg-[#1a1a1a] hover:bg-[#222] border border-[#222] rounded-lg text-gray-400 text-xs font-semibold transition-all">
+            <Database size={12} /> History ({history.length})
+          </button>
+          {lastUpdated && (
+            <div className="flex items-center gap-1.5 text-xs text-gray-600">
+              <Clock size={11} />
+              <span>Updated {lastUpdated}</span>
+              <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${newsSource === 'gnews' ? 'bg-[#4ade80]/20 text-[#4ade80]' : 'bg-gray-700 text-gray-400'}`}>
+                {newsSource === 'gnews' ? 'LIVE' : 'MOCK'}
+              </span>
+            </div>
+          )}
+          {selectedHistory && (
+            <button onClick={() => setSelectedHistory(null)} className="ml-auto flex items-center gap-1 text-xs text-yellow-400">
+              <X size={12} /> Exit history view
+            </button>
+          )}
+        </div>
+
+        <div className="space-y-3">
+          {displayNews.map((article, i) => {
+            const a = article as NewsArticle;
+            const isExpanded = expandedNews === a.id;
+            return (
+              <div key={a.id ?? i} className={`${CARD} rounded-xl p-4`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1">
+                    <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                      <span className={`text-[10px] font-bold ${sentimentColour(a.sentiment)}`}>{a.sentiment.toUpperCase()}</span>
+                      <span className="text-[10px] text-gray-600">·</span>
+                      <span className="text-[10px] text-gray-500">{a.source}</span>
+                      <span className="text-[10px] text-gray-600">·</span>
+                      <span className="text-[10px] text-gray-500">{a.region}</span>
+                    </div>
+                    <button onClick={() => setExpandedNews(isExpanded ? null : a.id)} className="text-left w-full">
+                      <p className="text-sm font-semibold text-white hover:text-[#4ade80] transition-colors leading-snug">{a.headline}</p>
+                    </button>
+                    <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">{a.summary}</p>
+                  </div>
+                  <button onClick={() => setExpandedNews(isExpanded ? null : a.id)}
+                    className="shrink-0 w-7 h-7 rounded-lg bg-[#1a1a1a] flex items-center justify-center hover:bg-[#222] transition-colors">
+                    <ChevronRight size={14} className={`text-gray-500 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                  </button>
+                </div>
+
+                {isExpanded && a.aiAnalysis && (
+                  <div className="mt-4 pt-4 border-t border-[#222] grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {[
+                      { label: '📋 What Happened',     content: a.aiAnalysis.whatHappened },
+                      { label: '💡 Why It Matters',    content: a.aiAnalysis.whyItMatters },
+                      { label: '🏠 Property Impact',   content: a.aiAnalysis.propertyImpact },
+                      { label: '🇱🇰 SL Implication',  content: a.aiAnalysis.sriLankaImplication },
+                    ].map((item, j) => (
+                      <div key={j} className={`${CARD2} rounded-lg p-3`}>
+                        <p className="text-[10px] font-semibold text-gray-400 mb-1">{item.label}</p>
+                        <p className="text-xs text-gray-300 leading-relaxed">{item.content}</p>
+                      </div>
+                    ))}
+                    {a.url && (
+                      <div className="col-span-full">
+                        <a href={a.url} target="_blank" rel="noopener noreferrer"
+                          className="text-xs text-[#4ade80] hover:underline flex items-center gap-1">
+                          <Globe size={11} /> Read full article →
+                        </a>
+                      </div>
                     )}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white font-medium text-sm">{flow.signal}</p>
-                    <p className="text-gray-500 text-xs mt-1">{flow.description}</p>
-                  </div>
-                  <span className="px-3 py-1 bg-blue-900/60 text-blue-200 text-xs rounded-full whitespace-nowrap">{flow.region}</span>
-                  <span className={`px-3 py-1 ${getMagnitudeColor(flow.magnitude)} text-white text-xs rounded-full`}>
-                    {flow.magnitude}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* RIGHT COL */}
-        <div className="space-y-6">
-          {/* Opportunity Scanner */}
-          <div className="bg-[#141b2d] rounded-xl p-6 border border-gray-800">
-            <div className="flex items-center space-x-2 mb-4">
-              <Target className="w-5 h-5 text-[#c9a84c]" />
-              <h3 className="text-lg font-bold text-white">Opportunity Scanner</h3>
-            </div>
-            <div className="space-y-3">
-              {opportunities.slice(0, 6).map((opp) => (
-                <div key={opp.id} className="bg-[#0a0f1e] rounded-lg p-3 border border-gray-700/50">
-                  <div className="flex items-start justify-between mb-2">
-                    <p className="text-white font-medium text-sm flex-1">{opp.title}</p>
-                    <span className="px-2 py-0.5 bg-purple-900/60 text-purple-200 text-xs rounded ml-2 whitespace-nowrap">
-                      {opp.region}
-                    </span>
-                  </div>
-                  <p className="text-gray-500 text-xs mb-2">{opp.description}</p>
-                  <div className="w-full bg-gray-700/50 rounded-full h-1.5 overflow-hidden">
-                    <div
-                      className="h-full rounded-full"
-                      style={{
-                        width: `${opp.confidence}%`,
-                        background: opp.confidence >= 80 ? '#22c55e' : opp.confidence >= 60 ? '#c9a84c' : '#f97316',
-                      }}
-                    />
-                  </div>
-                  <p className="text-gray-500 text-xs mt-1">{opp.confidence}% confidence · {opp.category}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Risk Monitor */}
-          <div className="bg-[#141b2d] rounded-xl p-6 border border-gray-800">
-            <div className="flex items-center space-x-2 mb-4">
-              <AlertCircle className="w-5 h-5 text-red-500" />
-              <h3 className="text-lg font-bold text-white">Risk Monitor</h3>
-            </div>
-            <div className="space-y-3">
-              {risks.map((risk) => (
-                <div key={risk.id} className="bg-[#0a0f1e] rounded-lg p-3 border border-gray-700/50">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className={`px-2 py-0.5 ${getSeverityColor(risk.severity)} text-xs rounded font-semibold`}>
-                      {risk.severity.toUpperCase()}
-                    </span>
-                    <span className="px-2 py-0.5 bg-gray-700/60 text-gray-300 text-xs rounded">{risk.category}</span>
-                  </div>
-                  <p className="text-white font-medium text-sm mb-1">{risk.title}</p>
-                  <p className="text-gray-500 text-xs">{risk.description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* SECTION 3: Sri Lanka Market Intelligence */}
-      <div className="bg-[#141b2d] rounded-xl p-6 border border-gray-800">
-        <h3 className="text-lg font-bold text-white mb-6">Sri Lanka Market Intelligence</h3>
-        <div className="grid grid-cols-2 gap-6">
-          <div className="bg-[#0a0f1e] rounded-lg p-4 border border-gray-700/50">
-            <p className="text-gray-300 font-semibold text-sm mb-4">Tourism Arrivals</p>
-            <ResponsiveContainer width="100%" height={220}>
-              <AreaChart data={tourismData}>
-                <defs>
-                  <linearGradient id="colorTourism" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#14b8a6" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1a2235" />
-                <XAxis dataKey="name" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{ backgroundColor: '#141b2d', border: '1px solid #333', borderRadius: 8 }} />
-                <Area type="monotone" dataKey="value" stroke="#14b8a6" strokeWidth={2} fillOpacity={1} fill="url(#colorTourism)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="bg-[#0a0f1e] rounded-lg p-4 border border-gray-700/50">
-            <p className="text-gray-300 font-semibold text-sm mb-4">Construction Activity Index</p>
-            <ResponsiveContainer width="100%" height={220}>
-              <LineChart data={constructionData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1a2235" />
-                <XAxis dataKey="name" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{ backgroundColor: '#141b2d', border: '1px solid #333', borderRadius: 8 }} />
-                <Line type="monotone" dataKey="value" stroke="#c9a84c" strokeWidth={2} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="bg-[#0a0f1e] rounded-lg p-4 border border-gray-700/50">
-            <p className="text-gray-300 font-semibold text-sm mb-4">Mortgage Interest Rates (%)</p>
-            <ResponsiveContainer width="100%" height={220}>
-              <LineChart data={mortgageData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1a2235" />
-                <XAxis dataKey="name" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} domain={['dataMin - 0.2', 'dataMax + 0.2']} />
-                <Tooltip contentStyle={{ backgroundColor: '#141b2d', border: '1px solid #333', borderRadius: 8 }} />
-                <Line type="monotone" dataKey="value" stroke="#ef4444" strokeWidth={2} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="bg-[#0a0f1e] rounded-lg p-4 border border-gray-700/50">
-            <p className="text-gray-300 font-semibold text-sm mb-4">Foreign Buyer Signals</p>
-            <ResponsiveContainer width="100%" height={220}>
-              <AreaChart data={foreignBuyerData}>
-                <defs>
-                  <linearGradient id="colorForeign" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1a2235" />
-                <XAxis dataKey="name" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{ backgroundColor: '#141b2d', border: '1px solid #333', borderRadius: 8 }} />
-                <Area type="monotone" dataKey="value" stroke="#22c55e" strokeWidth={2} fillOpacity={1} fill="url(#colorForeign)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
-      {/* SECTION 4: Sri Lanka District Price Intelligence */}
-      <div className="bg-[#141b2d] rounded-xl p-6 border border-gray-800">
-        <div className="flex items-start justify-between mb-5">
-          <div>
-            <h3 className="text-lg font-bold text-white">Sri Lanka District Price Intelligence</h3>
-            <p className="text-gray-500 text-xs mt-1">Residential property · USD/sqft · Q1 2026 estimates</p>
-          </div>
-          <div className="flex items-center gap-2">
-            {(['price', 'growth', 'province'] as SortKey[]).map((s) => (
-              <button
-                key={s}
-                onClick={() => setDistrictSort(s)}
-                className={`px-3 py-1.5 text-xs rounded-lg font-medium transition-colors ${
-                  districtSort === s
-                    ? 'bg-[#c9a84c] text-black'
-                    : 'bg-[#0a0f1e] text-gray-400 hover:text-white border border-gray-700/50'
-                }`}
-              >
-                {s === 'price' ? 'By Price' : s === 'growth' ? 'By Growth' : 'By Province'}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Summary Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="bg-[#0a0f1e] rounded-lg p-4 border border-[#c9a84c]/30">
-            <p className="text-gray-500 text-xs mb-1 uppercase tracking-wide">Highest Price</p>
-            <p className="text-[#c9a84c] text-xl font-bold">{topPrice.district}</p>
-            <p className="text-white text-sm font-medium">${topPrice.priceUSD}/sqft</p>
-            <p className="text-gray-500 text-xs">LKR {topPrice.priceLKR.toLocaleString()} · {topPrice.province}</p>
-          </div>
-          <div className="bg-[#0a0f1e] rounded-lg p-4 border border-green-900/40">
-            <p className="text-gray-500 text-xs mb-1 uppercase tracking-wide">Fastest Growing</p>
-            <p className="text-green-400 text-xl font-bold">{topGrowth.district}</p>
-            <p className="text-white text-sm font-medium">+{topGrowth.yoyChange}% YoY</p>
-            <p className="text-gray-500 text-xs">${topGrowth.priceUSD}/sqft · {topGrowth.province}</p>
-          </div>
-          <div className="bg-[#0a0f1e] rounded-lg p-4 border border-blue-900/40">
-            <p className="text-gray-500 text-xs mb-1 uppercase tracking-wide">Emerging Hotspot</p>
-            <p className="text-blue-400 text-xl font-bold">{topHotspot?.district}</p>
-            <p className="text-white text-sm font-medium">+{topHotspot?.yoyChange}% YoY</p>
-            <p className="text-gray-500 text-xs">${topHotspot?.priceUSD}/sqft · {topHotspot?.province}</p>
-          </div>
-        </div>
-
-        {/* Tier Legend */}
-        <div className="flex items-center gap-6 mb-5 pb-4 border-b border-gray-800">
-          {[
-            { tier: 'premium', label: 'Premium $50+', color: 'bg-[#c9a84c]' },
-            { tier: 'mid', label: 'Mid-Range $25–50', color: 'bg-[#2dd4bf]' },
-            { tier: 'emerging', label: 'Emerging $15–25', color: 'bg-blue-500' },
-            { tier: 'affordable', label: 'Affordable <$15', color: 'bg-gray-600' },
-          ].map(({ tier, label, color }) => (
-            <div key={tier} className="flex items-center gap-1.5">
-              <div className={`w-2.5 h-2.5 rounded-sm ${color}`} />
-              <span className="text-gray-400 text-xs">{label}</span>
-            </div>
-          ))}
-          <div className="ml-auto flex items-center gap-1.5">
-            <span className="text-yellow-400 text-xs">★</span>
-            <span className="text-gray-400 text-xs">Hotspot</span>
-          </div>
-        </div>
-
-        {/* District Grid */}
-        {districtSort === 'province' ? (
-          <div className="space-y-5">
-            {provinces.map(province => (
-              <div key={province}>
-                <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest mb-3">{province} Province</p>
-                <div className="grid grid-cols-5 gap-3">
-                  {sortedDistricts.filter(d => d.province === province).map(d => (
-                    <div key={d.district} className={`rounded-lg p-3 border ${getTierStyle(d.tier)}`}>
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="text-white font-semibold text-sm">{d.district}</p>
-                        {d.hotspot && <span className="text-yellow-400 text-xs">★</span>}
-                      </div>
-                      <p className="text-[#c9a84c] font-bold text-base">${d.priceUSD}</p>
-                      <p className="text-gray-500 text-xs">LKR {d.priceLKR.toLocaleString()}</p>
-                      <div className="flex items-center gap-1 mt-2">
-                        <span className={`text-xs font-semibold ${d.yoyChange >= 10 ? 'text-green-400' : d.yoyChange >= 6 ? 'text-teal-400' : 'text-gray-400'}`}>
-                          +{d.yoyChange}%
-                        </span>
-                        <span className="text-gray-600 text-xs">YoY</span>
-                      </div>
-                      <span className={`inline-block mt-1.5 px-1.5 py-0.5 rounded text-xs ${getTierBadge(d.tier)}`}>
-                        {d.tier}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-5 gap-3">
-            {sortedDistricts.map(d => (
-              <div key={d.district} className={`rounded-lg p-3 border ${getTierStyle(d.tier)}`}>
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-white font-semibold text-sm">{d.district}</p>
-                  {d.hotspot && <span className="text-yellow-400 text-xs">★</span>}
-                </div>
-                <p className="text-[#c9a84c] font-bold text-base">${d.priceUSD}<span className="text-gray-500 text-xs font-normal">/sqft</span></p>
-                <p className="text-gray-500 text-xs">LKR {d.priceLKR.toLocaleString()}</p>
-                <p className="text-gray-600 text-xs mt-0.5">{d.province}</p>
-                <div className="flex items-center gap-1 mt-2">
-                  <span className={`text-xs font-semibold ${d.yoyChange >= 10 ? 'text-green-400' : d.yoyChange >= 6 ? 'text-teal-400' : 'text-gray-400'}`}>
-                    +{d.yoyChange}%
-                  </span>
-                  <span className="text-gray-600 text-xs">YoY</span>
-                </div>
-                <span className={`inline-block mt-1.5 px-1.5 py-0.5 rounded text-xs ${getTierBadge(d.tier)}`}>
-                  {d.tier}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* SECTION 5: News Intelligence Feed */}
-      <div className="bg-[#141b2d] rounded-xl p-6 border border-gray-800">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h3 className="text-lg font-bold text-white">Property News Intelligence</h3>
-            <div className="flex items-center gap-3 mt-1">
-              <span className={`px-2 py-0.5 rounded text-xs font-medium ${newsSource === 'gnews' ? 'bg-green-900/50 text-green-400' : 'bg-gray-800 text-gray-400'}`}>
-                {newsSource === 'gnews' ? '● Live — GNews' : '● Mock Data'}
-              </span>
-              {lastUpdated && (
-                <span className="flex items-center gap-1 text-gray-500 text-xs">
-                  <Clock className="w-3 h-3" /> Updated {lastUpdated}
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => { setSelectedHistory(null); setShowHistory(true); }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0a0f1e] border border-gray-700/50 text-gray-400 hover:text-white text-xs rounded-lg transition-colors"
-            >
-              <Database className="w-3.5 h-3.5" />
-              History {history.length > 0 && <span className="bg-blue-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">{history.length}</span>}
-            </button>
-            <button
-              onClick={fetchNews}
-              disabled={isRefreshing}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#c9a84c] hover:bg-[#b8973b] text-black text-xs font-semibold rounded-lg transition-colors disabled:opacity-60"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-              {isRefreshing ? 'Refreshing...' : 'Refresh News'}
-            </button>
-          </div>
-        </div>
-        <div className="grid grid-cols-3 gap-4">
-          {news.map((article) => (
-            <div key={article.id} className="bg-[#0a0f1e] rounded-lg p-4 border border-gray-700/50 flex flex-col">
-              <div className="flex items-center gap-2 mb-3">
-                <div className={`w-2.5 h-2.5 rounded-full ${getSentimentDotColor(article.sentiment)} flex-shrink-0`} />
-                <span className="text-gray-500 text-xs">
-                  {new Date(article.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                </span>
-              </div>
-
-              <h4 className="text-white font-bold text-sm mb-3 leading-tight">{article.headline}</h4>
-
-              <div className="flex flex-wrap gap-1.5 mb-3">
-                <span className="px-2 py-0.5 bg-blue-900/60 text-blue-200 text-xs rounded-full">{article.source}</span>
-                <span className="px-2 py-0.5 bg-purple-900/60 text-purple-200 text-xs rounded-full">{article.region}</span>
-              </div>
-
-              <p className="text-gray-400 text-xs mb-3 flex-1 leading-relaxed">{article.summary}</p>
-
-              {article.url && (
-                <a href={article.url} target="_blank" rel="noopener noreferrer" className="text-teal-500 hover:text-teal-400 text-xs mb-2 truncate">
-                  Read full article →
-                </a>
-              )}
-
-              <button
-                onClick={() => setExpandedNews(expandedNews === article.id ? null : article.id)}
-                className="flex items-center gap-1 text-teal-400 hover:text-teal-300 text-xs font-semibold transition-colors mt-auto"
-              >
-                {expandedNews === article.id ? (
-                  <>Hide AI Analysis <ChevronUp className="w-3 h-3" /></>
-                ) : (
-                  <>View AI Analysis <ChevronDown className="w-3 h-3" /></>
                 )}
-              </button>
-
-              {expandedNews === article.id && (
-                <div className="mt-3 pt-3 border-t border-gray-700/50 space-y-2.5">
-                  <div>
-                    <p className="text-[#c9a84c] text-xs font-semibold mb-0.5">What Happened</p>
-                    <p className="text-gray-300 text-xs">{article.aiAnalysis.whatHappened}</p>
-                  </div>
-                  <div>
-                    <p className="text-[#c9a84c] text-xs font-semibold mb-0.5">Why It Matters</p>
-                    <p className="text-gray-300 text-xs">{article.aiAnalysis.whyItMatters}</p>
-                  </div>
-                  <div>
-                    <p className="text-[#c9a84c] text-xs font-semibold mb-0.5">Property Impact</p>
-                    <p className="text-gray-300 text-xs">{article.aiAnalysis.propertyImpact}</p>
-                  </div>
-                  <div>
-                    <p className="text-teal-500 text-xs font-semibold mb-0.5">Sri Lanka Implication</p>
-                    <p className="text-gray-300 text-xs">{article.aiAnalysis.sriLankaImplication}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
-      </div>
+      </Section>
 
-      {/* HISTORY PANEL — slide-in from right */}
+      {/* ── HISTORY PANEL ─────────────────────────────────────────────────── */}
       {showHistory && (
-        <div className="fixed inset-0 z-50 flex">
-          <div className="flex-1 bg-black/60 backdrop-blur-sm" onClick={() => { setShowHistory(false); setSelectedHistory(null); }} />
-          <div className="w-[480px] bg-[#0d1321] border-l border-gray-700 flex flex-col h-full overflow-hidden">
-            <div className="flex items-center justify-between p-5 border-b border-gray-800">
-              <div>
-                <h3 className="text-white font-bold">News History</h3>
-                <p className="text-gray-500 text-xs mt-0.5">Last {history.length} fetch snapshots saved locally</p>
-              </div>
-              <button onClick={() => { setShowHistory(false); setSelectedHistory(null); }} className="text-gray-500 hover:text-white transition-colors">
-                <X className="w-5 h-5" />
+        <div className="fixed inset-y-0 right-0 w-80 bg-[#111111] border-l border-[#1e1e1e] z-50 flex flex-col shadow-2xl">
+          <div className="flex items-center justify-between p-4 border-b border-[#1e1e1e]">
+            <p className="text-sm font-semibold text-white">News History</p>
+            <button onClick={() => setShowHistory(false)} className="w-7 h-7 rounded-lg bg-[#1a1a1a] flex items-center justify-center hover:bg-[#222]">
+              <X size={14} className="text-gray-400" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-3 space-y-2">
+            {history.length === 0 ? (
+              <p className="text-xs text-gray-500 text-center mt-8">No history yet. Click Refresh to start saving snapshots.</p>
+            ) : history.map((h) => (
+              <button key={h.id} onClick={() => { setSelectedHistory(h); setShowHistory(false); }}
+                className={`w-full ${CARD} rounded-lg p-3 text-left hover:border-[#4ade80]/30 transition-all`}>
+                <div className="flex justify-between items-start mb-1">
+                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${h.source === 'gnews' ? 'bg-[#4ade80]/20 text-[#4ade80]' : 'bg-gray-700 text-gray-400'}`}>
+                    {h.source === 'gnews' ? 'LIVE' : 'MOCK'}
+                  </span>
+                  <span className="text-[10px] text-gray-600">{h.articleCount} articles</span>
+                </div>
+                <p className="text-xs text-gray-400">{new Date(h.fetchedAt).toLocaleString()}</p>
+              </button>
+            ))}
+          </div>
+          {history.length > 0 && (
+            <div className="p-3 border-t border-[#1e1e1e]">
+              <button onClick={() => { setHistory([]); localStorage.removeItem('rjgrero_news_history'); }}
+                className="w-full py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs hover:bg-red-500/20 transition-all">
+                Clear All History
               </button>
             </div>
-
-            {selectedHistory ? (
-              <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                <div className="flex items-center gap-2 mb-4">
-                  <button onClick={() => setSelectedHistory(null)} className="text-teal-400 hover:text-teal-300 text-xs">← Back to list</button>
-                  <span className="text-gray-600 text-xs">·</span>
-                  <span className="text-gray-400 text-xs">{new Date(selectedHistory.fetchedAt).toLocaleString()}</span>
-                  <span className={`px-2 py-0.5 rounded text-xs ${selectedHistory.source === 'gnews' ? 'bg-green-900/50 text-green-400' : 'bg-gray-800 text-gray-400'}`}>
-                    {selectedHistory.source}
-                  </span>
-                </div>
-                {selectedHistory.articles.map((article, i) => (
-                  <div key={i} className="bg-[#141b2d] rounded-lg p-3 border border-gray-800">
-                    <p className="text-white text-sm font-semibold mb-1 leading-tight">{article.headline}</p>
-                    <p className="text-gray-400 text-xs mb-2">{article.summary}</p>
-                    <div className="flex gap-2">
-                      <span className="px-2 py-0.5 bg-blue-900/60 text-blue-200 text-xs rounded-full">{article.source}</span>
-                      <span className="px-2 py-0.5 bg-purple-900/60 text-purple-200 text-xs rounded-full">{article.region}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                {history.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Database className="w-8 h-8 text-gray-700 mx-auto mb-3" />
-                    <p className="text-gray-500 text-sm">No history yet</p>
-                    <p className="text-gray-600 text-xs mt-1">Click Refresh News to start saving snapshots</p>
-                  </div>
-                ) : (
-                  history.map((entry, i) => (
-                    <button
-                      key={entry.id}
-                      onClick={() => setSelectedHistory(entry)}
-                      className="w-full text-left bg-[#141b2d] hover:bg-[#1a2540] rounded-lg p-4 border border-gray-800 hover:border-gray-600 transition-colors"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-white text-sm font-semibold">
-                          Snapshot {history.length - i}
-                          {i === 0 && <span className="ml-2 px-1.5 py-0.5 bg-[#c9a84c]/20 text-[#c9a84c] text-xs rounded">Latest</span>}
-                        </span>
-                        <span className={`px-2 py-0.5 rounded text-xs ${entry.source === 'gnews' ? 'bg-green-900/50 text-green-400' : 'bg-gray-800 text-gray-400'}`}>
-                          {entry.source === 'gnews' ? 'Live' : 'Mock'}
-                        </span>
-                      </div>
-                      <p className="text-gray-400 text-xs flex items-center gap-1.5">
-                        <Clock className="w-3 h-3" />
-                        {new Date(entry.fetchedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                      <p className="text-gray-500 text-xs mt-1">{entry.articleCount} articles saved</p>
-                    </button>
-                  ))
-                )}
-              </div>
-            )}
-
-            {history.length > 0 && !selectedHistory && (
-              <div className="p-4 border-t border-gray-800">
-                <button
-                  onClick={() => {
-                    setHistory([]);
-                    try { localStorage.removeItem('rjgrero_news_history'); } catch {}
-                  }}
-                  className="w-full py-2 text-xs text-red-400 hover:text-red-300 border border-red-900/40 hover:border-red-700 rounded-lg transition-colors"
-                >
-                  Clear all history
-                </button>
-              </div>
-            )}
-          </div>
+          )}
         </div>
       )}
     </div>

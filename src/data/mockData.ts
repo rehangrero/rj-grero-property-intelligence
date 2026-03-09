@@ -596,105 +596,60 @@ export const dailySummary = {
 };
 
 export const sriLankaDistrictPrices = [
-  // Western Province
-  { district: 'Colombo', province: 'Western', priceUSD: 85, priceLKR: 28500, yoyChange: 12.5, trend: 'rising' as const, tier: 'premium' as const, hotspot: true },
-  { district: 'Gampaha', province: 'Western', priceUSD: 42, priceLKR: 14000, yoyChange: 8.2, trend: 'rising' as const, tier: 'mid' as const, hotspot: false },
-  { district: 'Kalutara', province: 'Western', priceUSD: 35, priceLKR: 11500, yoyChange: 6.8, trend: 'rising' as const, tier: 'mid' as const, hotspot: false },
-  // Southern Province
-  { district: 'Galle', province: 'Southern', priceUSD: 52, priceLKR: 17200, yoyChange: 18.5, trend: 'rising' as const, tier: 'premium' as const, hotspot: true },
-  { district: 'Matara', province: 'Southern', priceUSD: 32, priceLKR: 10500, yoyChange: 11.2, trend: 'rising' as const, tier: 'mid' as const, hotspot: false },
-  { district: 'Hambantota', province: 'Southern', priceUSD: 22, priceLKR: 7200, yoyChange: 7.8, trend: 'rising' as const, tier: 'emerging' as const, hotspot: false },
-  // Central Province
-  { district: 'Kandy', province: 'Central', priceUSD: 38, priceLKR: 12500, yoyChange: 9.1, trend: 'rising' as const, tier: 'mid' as const, hotspot: true },
-  { district: 'Nuwara Eliya', province: 'Central', priceUSD: 28, priceLKR: 9200, yoyChange: 14.3, trend: 'rising' as const, tier: 'emerging' as const, hotspot: true },
-  { district: 'Matale', province: 'Central', priceUSD: 18, priceLKR: 6000, yoyChange: 4.2, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false },
-  // Northern Province
-  { district: 'Jaffna', province: 'Northern', priceUSD: 25, priceLKR: 8200, yoyChange: 15.6, trend: 'rising' as const, tier: 'emerging' as const, hotspot: true },
-  { district: 'Kilinochchi', province: 'Northern', priceUSD: 9, priceLKR: 2900, yoyChange: 8.2, trend: 'rising' as const, tier: 'affordable' as const, hotspot: false },
-  { district: 'Mannar', province: 'Northern', priceUSD: 10, priceLKR: 3200, yoyChange: 3.5, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false },
-  { district: 'Vavuniya', province: 'Northern', priceUSD: 12, priceLKR: 4000, yoyChange: 6.1, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false },
-  { district: 'Mullaitivu', province: 'Northern', priceUSD: 8, priceLKR: 2600, yoyChange: 5.4, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false },
-  // Eastern Province
-  { district: 'Trincomalee', province: 'Eastern', priceUSD: 20, priceLKR: 6500, yoyChange: 12.8, trend: 'rising' as const, tier: 'emerging' as const, hotspot: true },
-  { district: 'Batticaloa', province: 'Eastern', priceUSD: 15, priceLKR: 4800, yoyChange: 7.3, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false },
-  { district: 'Ampara', province: 'Eastern', priceUSD: 13, priceLKR: 4200, yoyChange: 5.8, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false },
-  // North Western Province
-  { district: 'Kurunegala', province: 'North Western', priceUSD: 24, priceLKR: 7800, yoyChange: 7.9, trend: 'rising' as const, tier: 'emerging' as const, hotspot: false },
-  { district: 'Puttalam', province: 'North Western', priceUSD: 16, priceLKR: 5200, yoyChange: 5.2, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false },
-  // North Central Province
-  { district: 'Anuradhapura', province: 'North Central', priceUSD: 14, priceLKR: 4500, yoyChange: 6.4, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false },
-  { district: 'Polonnaruwa', province: 'North Central', priceUSD: 12, priceLKR: 3900, yoyChange: 4.8, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false },
-  // Sabaragamuwa Province
-  { district: 'Ratnapura', province: 'Sabaragamuwa', priceUSD: 19, priceLKR: 6200, yoyChange: 6.7, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false },
-  { district: 'Kegalle', province: 'Sabaragamuwa', priceUSD: 17, priceLKR: 5500, yoyChange: 5.5, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false },
-  // Uva Province
-  { district: 'Badulla', province: 'Uva', priceUSD: 16, priceLKR: 5100, yoyChange: 6.2, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false },
-  { district: 'Monaragala', province: 'Uva', priceUSD: 11, priceLKR: 3500, yoyChange: 4.1, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false },
+  // ── Colombo City Districts (1–10) ──────────────────────────────────────────
+  { district: 'Colombo 7 – Cinnamon Gardens', province: 'Western', area: 'colombo', priceUSD: 150, priceLKR: 49500, yoyChange: 14.2, trend: 'rising' as const, tier: 'premium' as const, hotspot: true, aiScore: 9.1, notes: 'Most prestigious address. Embassies, elite schools, Heritage villas.' },
+  { district: 'Colombo 3 – Kollupitiya', province: 'Western', area: 'colombo', priceUSD: 130, priceLKR: 43000, yoyChange: 13.8, trend: 'rising' as const, tier: 'premium' as const, hotspot: true, aiScore: 8.9, notes: 'Prime retail corridor. High-rise demand surging.' },
+  { district: 'Colombo 2 – Slave Island', province: 'Western', area: 'colombo', priceUSD: 110, priceLKR: 36300, yoyChange: 16.5, trend: 'rising' as const, tier: 'premium' as const, hotspot: true, aiScore: 8.7, notes: 'Emerging luxury enclave. Lake-facing premium commands 30% uplift.' },
+  { district: 'Colombo 1 – Fort / Pettah', province: 'Western', area: 'colombo', priceUSD: 120, priceLKR: 39600, yoyChange: 11.2, trend: 'rising' as const, tier: 'premium' as const, hotspot: true, aiScore: 8.4, notes: 'CBD core. Commercial and mixed-use dominance. New office demand growing.' },
+  { district: 'Colombo 4 – Bambalapitiya', province: 'Western', area: 'colombo', priceUSD: 105, priceLKR: 34700, yoyChange: 12.1, trend: 'rising' as const, tier: 'premium' as const, hotspot: true, aiScore: 8.2, notes: 'Residential hotspot. Proximity to Colombo 3 premium driving appreciation.' },
+  { district: 'Colombo 5 – Havelock Town', province: 'Western', area: 'colombo', priceUSD: 90, priceLKR: 29700, yoyChange: 10.8, trend: 'rising' as const, tier: 'premium' as const, hotspot: false, aiScore: 7.8, notes: 'Mid-premium, family demand strong. Good rental yield zone.' },
+  { district: 'Colombo 6 – Wellawatte', province: 'Western', area: 'colombo', priceUSD: 85, priceLKR: 28100, yoyChange: 9.5, trend: 'rising' as const, tier: 'premium' as const, hotspot: false, aiScore: 7.5, notes: 'Coastal strip appeal. Diaspora buyer preference market.' },
+  { district: 'Colombo 8 – Borella', province: 'Western', area: 'colombo', priceUSD: 75, priceLKR: 24800, yoyChange: 8.3, trend: 'rising' as const, tier: 'mid' as const, hotspot: false, aiScore: 7.0, notes: 'Hospital corridor. Steady demand. Undervalued relative to neighbours.' },
+  { district: 'Colombo 10 – Maradana', province: 'Western', area: 'colombo', priceUSD: 70, priceLKR: 23100, yoyChange: 7.2, trend: 'stable' as const, tier: 'mid' as const, hotspot: false, aiScore: 6.5, notes: 'Commercial mixed-use. Redevelopment potential in fringe areas.' },
+  { district: 'Colombo 9 – Dematagoda', province: 'Western', area: 'colombo', priceUSD: 65, priceLKR: 21500, yoyChange: 6.4, trend: 'stable' as const, tier: 'mid' as const, hotspot: false, aiScore: 6.1, notes: 'Industrial fringe converting to residential. Long-term upside.' },
+  // ── Greater Colombo & Western ──────────────────────────────────────────────
+  { district: 'Gampaha', province: 'Western', area: 'other', priceUSD: 42, priceLKR: 14000, yoyChange: 8.2, trend: 'rising' as const, tier: 'mid' as const, hotspot: false, aiScore: 6.8, notes: 'Airport corridor. Industrial and logistics demand driving land values.' },
+  { district: 'Kalutara', province: 'Western', area: 'other', priceUSD: 35, priceLKR: 11500, yoyChange: 6.8, trend: 'rising' as const, tier: 'mid' as const, hotspot: false, aiScore: 6.2, notes: 'Beach strip gaining traction. Tourist villa market expanding.' },
+  // ── Southern ──────────────────────────────────────────────────────────────
+  { district: 'Galle', province: 'Southern', area: 'other', priceUSD: 52, priceLKR: 17200, yoyChange: 18.5, trend: 'rising' as const, tier: 'premium' as const, hotspot: true, aiScore: 8.6, notes: 'Top expat destination. Dutch Fort heritage drives luxury premium.' },
+  { district: 'Matara', province: 'Southern', area: 'other', priceUSD: 32, priceLKR: 10500, yoyChange: 11.2, trend: 'rising' as const, tier: 'mid' as const, hotspot: false, aiScore: 6.9, notes: 'Highway access improving. Southern expressway catalyst.' },
+  { district: 'Hambantota', province: 'Southern', area: 'other', priceUSD: 22, priceLKR: 7200, yoyChange: 7.8, trend: 'rising' as const, tier: 'emerging' as const, hotspot: false, aiScore: 5.8, notes: 'Port and SEZ proximity. Long-term industrial land play.' },
+  // ── Central ───────────────────────────────────────────────────────────────
+  { district: 'Kandy', province: 'Central', area: 'other', priceUSD: 38, priceLKR: 12500, yoyChange: 9.1, trend: 'rising' as const, tier: 'mid' as const, hotspot: true, aiScore: 7.2, notes: 'Cultural capital. Student and medical tourism demand steady.' },
+  { district: 'Nuwara Eliya', province: 'Central', area: 'other', priceUSD: 28, priceLKR: 9200, yoyChange: 14.3, trend: 'rising' as const, tier: 'emerging' as const, hotspot: true, aiScore: 7.4, notes: 'Climate appeal driving diaspora weekend home purchases.' },
+  { district: 'Matale', province: 'Central', area: 'other', priceUSD: 18, priceLKR: 6000, yoyChange: 4.2, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false, aiScore: 4.8, notes: 'Agricultural land dominant. Limited residential liquidity.' },
+  // ── Northern ──────────────────────────────────────────────────────────────
+  { district: 'Jaffna', province: 'Northern', area: 'other', priceUSD: 25, priceLKR: 8200, yoyChange: 15.6, trend: 'rising' as const, tier: 'emerging' as const, hotspot: true, aiScore: 7.6, notes: 'Post-conflict recovery phase. Diaspora remittance investment surging.' },
+  { district: 'Kilinochchi', province: 'Northern', area: 'other', priceUSD: 9, priceLKR: 2900, yoyChange: 8.2, trend: 'rising' as const, tier: 'affordable' as const, hotspot: false, aiScore: 4.5, notes: 'Reconstruction-phase market. Land banking opportunity, low entry.' },
+  { district: 'Mannar', province: 'Northern', area: 'other', priceUSD: 10, priceLKR: 3200, yoyChange: 3.5, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false, aiScore: 3.9, notes: 'Coastal land. Limited near-term catalysts.' },
+  { district: 'Vavuniya', province: 'Northern', area: 'other', priceUSD: 12, priceLKR: 4000, yoyChange: 6.1, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false, aiScore: 4.2, notes: 'Strategic northern gateway. Slow but steady appreciation.' },
+  { district: 'Mullaitivu', province: 'Northern', area: 'other', priceUSD: 8, priceLKR: 2600, yoyChange: 5.4, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false, aiScore: 3.5, notes: 'Coastal agricultural. Speculative land market only.' },
+  // ── Eastern ───────────────────────────────────────────────────────────────
+  { district: 'Trincomalee', province: 'Eastern', area: 'other', priceUSD: 20, priceLKR: 6500, yoyChange: 12.8, trend: 'rising' as const, tier: 'emerging' as const, hotspot: true, aiScore: 6.8, notes: 'Natural harbour advantage. Tourism and port investment attracting capital.' },
+  { district: 'Batticaloa', province: 'Eastern', area: 'other', priceUSD: 15, priceLKR: 4800, yoyChange: 7.3, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false, aiScore: 4.6, notes: 'Lagoon-facing land premium. Tourism potential underpriced.' },
+  { district: 'Ampara', province: 'Eastern', area: 'other', priceUSD: 13, priceLKR: 4200, yoyChange: 5.8, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false, aiScore: 4.0, notes: 'Agricultural and rural residential dominant.' },
+  // ── North Western ─────────────────────────────────────────────────────────
+  { district: 'Kurunegala', province: 'North Western', area: 'other', priceUSD: 24, priceLKR: 7800, yoyChange: 7.9, trend: 'rising' as const, tier: 'emerging' as const, hotspot: false, aiScore: 5.9, notes: 'Regional commercial hub. Logistics and manufacturing land in demand.' },
+  { district: 'Puttalam', province: 'North Western', area: 'other', priceUSD: 16, priceLKR: 5200, yoyChange: 5.2, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false, aiScore: 4.3, notes: 'Coastal industrial. Limited residential demand drivers.' },
+  // ── North Central ─────────────────────────────────────────────────────────
+  { district: 'Anuradhapura', province: 'North Central', area: 'other', priceUSD: 14, priceLKR: 4500, yoyChange: 6.4, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false, aiScore: 4.7, notes: 'Heritage city. Slow-moving land market with steady religious tourism.' },
+  { district: 'Polonnaruwa', province: 'North Central', area: 'other', priceUSD: 12, priceLKR: 3900, yoyChange: 4.8, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false, aiScore: 4.1, notes: 'Agricultural heartland. Minimal speculative activity.' },
+  // ── Sabaragamuwa ──────────────────────────────────────────────────────────
+  { district: 'Ratnapura', province: 'Sabaragamuwa', area: 'other', priceUSD: 19, priceLKR: 6200, yoyChange: 6.7, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false, aiScore: 5.0, notes: 'Gem corridor land. Tourism and eco-resort upside underexplored.' },
+  { district: 'Kegalle', province: 'Sabaragamuwa', area: 'other', priceUSD: 17, priceLKR: 5500, yoyChange: 5.5, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false, aiScore: 4.4, notes: 'Transit corridor. Colombo commuter belt fringe.' },
+  // ── Uva ───────────────────────────────────────────────────────────────────
+  { district: 'Badulla', province: 'Uva', area: 'other', priceUSD: 16, priceLKR: 5100, yoyChange: 6.2, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false, aiScore: 4.6, notes: 'Hill country estate land. Eco-tourism potential, illiquid market.' },
+  { district: 'Monaragala', province: 'Uva', area: 'other', priceUSD: 11, priceLKR: 3500, yoyChange: 4.1, trend: 'stable' as const, tier: 'affordable' as const, hotspot: false, aiScore: 3.8, notes: 'Remote rural. Long-term land banking only.' },
 ];
 
+
 export const marketMapData = [
-  {
-    country: "United Kingdom",
-    lat: 55.3781,
-    lng: -3.436,
-    sentiment: "positive",
-    headline: "New investor visa attracts GBP 2M+ commitments",
-    capitalFlow: "inflow",
-  },
-  {
-    country: "United States",
-    lat: 37.0902,
-    lng: -95.7129,
-    sentiment: "negative",
-    headline: "Office vacancy crisis pressures commercial valuations",
-    capitalFlow: "outflow",
-  },
-  {
-    country: "European Union",
-    lat: 54.5973,
-    lng: 15.2551,
-    sentiment: "positive",
-    headline: "ECB cuts to 4.5% as mortgage demand strengthens",
-    capitalFlow: "inflow",
-  },
-  {
-    country: "Australia",
-    lat: -25.2744,
-    lng: 133.7751,
-    sentiment: "neutral",
-    headline: "Market normalizing with sustainable 3-4% annual growth",
-    capitalFlow: "inflow",
-  },
-  {
-    country: "Singapore",
-    lat: 1.3521,
-    lng: 103.8198,
-    sentiment: "positive",
-    headline: "SGD 3.8B housing initiative supporting market growth",
-    capitalFlow: "inflow",
-  },
-  {
-    country: "Sri Lanka",
-    lat: 7.8731,
-    lng: 80.7718,
-    sentiment: "positive",
-    headline: "250K monthly arrivals + falling rates driving investment boom",
-    capitalFlow: "inflow",
-  },
-  {
-    country: "Dubai",
-    lat: 25.2048,
-    lng: 55.2708,
-    sentiment: "positive",
-    headline: "Record AED 178B transactions with strong Asian buyer participation",
-    capitalFlow: "inflow",
-  },
-  {
-    country: "China",
-    lat: 35.8617,
-    lng: 104.1954,
-    sentiment: "positive",
-    headline: "Q1 2026 sales recovery gains momentum in tier-1 cities",
-    capitalFlow: "inflow",
-  },
+  { country: "United Kingdom", lat: 55.3781, lng: -3.436, sentiment: "positive", headline: "New investor visa attracts GBP 2M+ commitments", capitalFlow: "inflow" },
+  { country: "United States", lat: 37.0902, lng: -95.7129, sentiment: "negative", headline: "Office vacancy crisis pressures commercial valuations", capitalFlow: "outflow" },
+  { country: "European Union", lat: 54.5973, lng: 15.2551, sentiment: "positive", headline: "ECB cuts to 4.5% as mortgage demand strengthens", capitalFlow: "inflow" },
+  { country: "Australia", lat: -25.2744, lng: 133.7751, sentiment: "neutral", headline: "Market normalizing with sustainable 3-4% annual growth", capitalFlow: "inflow" },
+  { country: "Singapore", lat: 1.3521, lng: 103.8198, sentiment: "positive", headline: "SGD 3.8B housing initiative supporting market growth", capitalFlow: "inflow" },
+  { country: "Sri Lanka", lat: 7.8731, lng: 80.7718, sentiment: "positive", headline: "250K monthly arrivals + falling rates driving investment boom", capitalFlow: "inflow" },
+  { country: "Dubai", lat: 25.2048, lng: 55.2708, sentiment: "positive", headline: "Record AED 178B transactions with strong Asian buyer participation", capitalFlow: "inflow" },
+  { country: "China", lat: 35.8617, lng: 104.1954, sentiment: "positive", headline: "Q1 2026 sales recovery gains momentum in tier-1 cities", capitalFlow: "inflow" },
 ];

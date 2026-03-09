@@ -1,16 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import Dashboard from "../components/Dashboard";
 
 export default function Home() {
+  const [activeSection, setActiveSection] = useState("dashboard");
+
   return (
-    <div className="min-h-screen bg-[#0a0f1e]">
+    <div className="min-h-screen bg-[#0d0d0d]">
       <Navbar />
-      <Sidebar />
+      <Sidebar activeSection={activeSection} onNavigate={setActiveSection} />
       <main className="pt-16 pl-64">
-        <Dashboard />
+        <Dashboard activeSection={activeSection} />
       </main>
     </div>
   );
