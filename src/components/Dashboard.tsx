@@ -8,7 +8,7 @@ import {
 import {
   ArrowUpRight, ArrowDownRight, RefreshCw, Clock, X, Database,
   Brain, Zap, ShieldAlert, Target, AlertCircle, Globe,
-  ChevronRight, Star, TrendingUp, TrendingDown, Minus,
+  ChevronRight, Star, TrendingUp, TrendingDown, Minus, Search, Loader2,
 } from 'lucide-react';
 import {
   interestRates, capitalFlows, opportunities, risks,
@@ -128,6 +128,10 @@ export default function Dashboard({ activeSection }: { activeSection: string }) 
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [selectedHistory, setSelectedHistory] = useState<HistoryEntry | null>(null);
+  const [newsSearch, setNewsSearch] = useState('');
+  const [sentimentFilter, setSentimentFilter] = useState<'all' | 'positive' | 'negative' | 'neutral'>('all');
+  const [regionFilter, setRegionFilter] = useState('all');
+  const [analyzingId, setAnalyzingId] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -150,10 +154,10 @@ export default function Dashboard({ activeSection }: { activeSection: string }) 
     }
   }, [activeSection]);
 
-  const fetchNews = useCallback(async () => {
+  const fetchNews = useCallback(async (force = false) => {
     setIsRefreshing(true);
     try {
-      const res = await fetch('/api/news');
+      const res = await fetch(force ? '/api/news?force=true' : '/api/news');
       const data = await res.json();
       if (data.success && data.articles?.length > 0) {
         const entry: HistoryEntry = {
@@ -165,7 +169,7 @@ export default function Dashboard({ activeSection }: { activeSection: string }) 
         };
         setNews(data.articles);
         setLastUpdated(new Date().toLocaleTimeString());
-        setNewsSource(data.source || 'mock');
+        setNewsSource((data.source || 'mock').replace('_cached', ''));
         setHistory(prev => {
           const updated = [entry, ...prev].slice(0, 10);
           localStorage.setItem('rjgrero_news_history', JSON.stringify(updated));
@@ -175,6 +179,28 @@ export default function Dashboard({ activeSection }: { activeSection: string }) 
     } catch (e) { console.error(e); }
     finally { setIsRefreshing(false); }
   }, []);
+
+  const analyzeArticle = useCallback(async (article: NewsArticle) => {
+    setAnalyzingId(article.id);
+    try {
+      const res = await fetch('/api/analysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ headline: article.headline, summary: article.summary }),
+      });
+      const data = await res.json();
+      if (data.success && data.analysis) {
+        setNews(prev => prev.map(a => a.id === article.id ? { ...a, aiAnalysis: data.analysis } : a));
+      }
+    } catch { /* noop */ }
+    finally { setAnalyzingId(null); }
+  }, []);
+
+  // Auto-refresh news every 30 minutes
+  useEffect(() => {
+    const interval = setInterval(() => fetchNews(), 30 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [fetchNews]);
 
   // District data
   const sortedDistricts = [...sriLankaDistrictPrices]
@@ -200,6 +226,28 @@ export default function Dashboard({ activeSection }: { activeSection: string }) 
   }));
 
   const displayNews = selectedHistory ? selectedHistory.articles : news;
+
+  const uniqueRegions = [...new Set(displayNews.map(a => a.region).filter(Boolean))].sort();
+
+  const filteredNews = displayNews.filter(a => {
+    const q = newsSearch.toLowerCase();
+    const searchMatch = !q || a.headline.toLowerCase().includes(q) || a.summary.toLowerCase().includes(q);
+    const sentimentMatch = sentimentFilter === 'all' || a.sentiment === sentimentFilter;
+    const regionMatch = regionFilter === 'all' || a.region === regionFilter;
+    return searchMatch && sentimentMatch && regionMatch;
+  });
+
+  const needsAnalysis = (a: NewsArticle) =>
+    !a.aiAnalysis.whyItMatters || a.aiAnalysis.whyItMatters === '';
+
+  const sourceBadgeClass = (source: string) => {
+    if (['Economy Next', 'FT Sri Lanka'].includes(source)) return 'bg-[#4ade80]/15 text-[#4ade80]';
+    if (['PropertyGuru', 'Straits Times'].includes(source)) return 'bg-blue-500/15 text-blue-400';
+    if (['Reuters', 'CNBC', 'CNBC Real Estate'].includes(source)) return 'bg-orange-500/15 text-orange-400';
+    if (['The Guardian'].includes(source)) return 'bg-purple-500/15 text-purple-400';
+    if (['Arabian Business'].includes(source)) return 'bg-amber-500/15 text-amber-400';
+    return 'bg-gray-700/60 text-gray-400';
+  };
 
   return (
     <div className="p-6 min-h-screen bg-[#0d0d0d] text-white">
@@ -677,7 +725,7 @@ export default function Dashboard({ activeSection }: { activeSection: string }) 
       {/* ── NEWS FEED ─────────────────────────────────────────────────────── */}
       <Section id="news-feed" title="Property News Feed" subtitle="Live intelligence from global property markets">
         <div className="flex flex-wrap items-center gap-2 mb-4">
-          <button onClick={fetchNews} disabled={isRefreshing}
+          <button onClick={() => fetchNews(true)} disabled={isRefreshing}
             className="flex items-center gap-2 px-4 py-2 bg-[#4ade80]/20 hover:bg-[#4ade80]/30 border border-[#4ade80]/40 rounded-lg text-[#4ade80] text-xs font-semibold transition-all disabled:opacity-50">
             <RefreshCw size={12} className={isRefreshing ? 'animate-spin' : ''} />
             {isRefreshing ? 'Fetching...' : 'Refresh News'}
@@ -690,8 +738,12 @@ export default function Dashboard({ activeSection }: { activeSection: string }) 
             <div className="flex items-center gap-1.5 text-xs text-gray-600">
               <Clock size={11} />
               <span>Updated {lastUpdated}</span>
-              <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${newsSource === 'gnews' ? 'bg-[#4ade80]/20 text-[#4ade80]' : 'bg-gray-700 text-gray-400'}`}>
-                {newsSource === 'gnews' ? 'LIVE' : 'MOCK'}
+              <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                newsSource === 'firecrawl' ? 'bg-[#4ade80]/20 text-[#4ade80]' :
+                newsSource === 'mock' ? 'bg-gray-700 text-gray-400' :
+                'bg-blue-500/20 text-blue-400'
+              }`}>
+                {newsSource === 'firecrawl' ? 'LIVE' : newsSource === 'mock' ? 'MOCK' : newsSource.toUpperCase()}
               </span>
             </div>
           )}
@@ -702,19 +754,68 @@ export default function Dashboard({ activeSection }: { activeSection: string }) 
           )}
         </div>
 
+        {/* ── Search + Filters ──────────────────────────────────────────── */}
+        <div className="flex flex-col gap-2 mb-4">
+          <div className="relative">
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+            <input
+              type="text"
+              value={newsSearch}
+              onChange={e => setNewsSearch(e.target.value)}
+              placeholder="Search headlines and summaries..."
+              className="w-full bg-[#1a1a1a] border border-[#222] rounded-lg pl-8 pr-4 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#4ade80]/40 transition-colors"
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Sentiment filter */}
+            <div className="flex bg-[#1a1a1a] border border-[#222] rounded-lg p-0.5">
+              {(['all', 'positive', 'negative', 'neutral'] as const).map(s => (
+                <button key={s} onClick={() => setSentimentFilter(s)}
+                  className={`px-3 py-1 rounded-md text-xs font-medium transition-all capitalize ${sentimentFilter === s ? 'bg-[#4ade80]/20 text-[#4ade80]' : 'text-gray-500 hover:text-gray-300'}`}>
+                  {s === 'all' ? 'All' : s}
+                </button>
+              ))}
+            </div>
+            {/* Region filter */}
+            <select
+              value={regionFilter}
+              onChange={e => setRegionFilter(e.target.value)}
+              className="bg-[#1a1a1a] border border-[#222] rounded-lg px-3 py-1.5 text-xs text-gray-400 focus:outline-none focus:border-[#4ade80]/40 cursor-pointer"
+            >
+              <option value="all">All Regions</option>
+              {uniqueRegions.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+            <span className="text-[11px] text-gray-600 ml-auto">{filteredNews.length} article{filteredNews.length !== 1 ? 's' : ''}</span>
+          </div>
+        </div>
+
+        {/* ── Loading skeleton ──────────────────────────────────────────── */}
+        {isRefreshing && news.length === 0 && (
+          <div className="space-y-3 mb-3">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className={`${CARD} rounded-xl p-4 animate-pulse`}>
+                <div className="h-2.5 bg-[#222] rounded w-1/4 mb-3" />
+                <div className="h-4 bg-[#222] rounded w-3/4 mb-2" />
+                <div className="h-3 bg-[#222] rounded w-full mb-1" />
+                <div className="h-3 bg-[#222] rounded w-2/3" />
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="space-y-3">
-          {displayNews.map((article, i) => {
+          {filteredNews.map((article, i) => {
             const a = article;
             const isExpanded = expandedNews === a.id;
             return (
               <div key={a.id ?? i} className={`${CARD} rounded-xl p-4`}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1">
-                    <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                      <span className={`text-[10px] font-bold ${sentimentColour(a.sentiment)}`}>{a.sentiment.toUpperCase()}</span>
-                      <span className="text-[10px] text-gray-600">·</span>
-                      <span className="text-[10px] text-gray-500">{a.source}</span>
-                      <span className="text-[10px] text-gray-600">·</span>
+                    <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                      <span className={`text-[9px] font-bold ${sentimentColour(a.sentiment)}`}>{a.sentiment.toUpperCase()}</span>
+                      <span className="text-[10px] text-gray-700">·</span>
+                      <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded ${sourceBadgeClass(a.source)}`}>{a.source}</span>
+                      <span className="text-[10px] text-gray-700">·</span>
                       <span className="text-[10px] text-gray-500">{a.region}</span>
                     </div>
                     <button onClick={() => setExpandedNews(isExpanded ? null : a.id)} className="text-left w-full">
@@ -731,16 +832,32 @@ export default function Dashboard({ activeSection }: { activeSection: string }) 
                 {isExpanded && a.aiAnalysis && (
                   <div className="mt-4 pt-4 border-t border-[#222] grid grid-cols-1 md:grid-cols-2 gap-3">
                     {[
-                      { label: '📋 What Happened',     content: a.aiAnalysis.whatHappened },
-                      { label: '💡 Why It Matters',    content: a.aiAnalysis.whyItMatters },
-                      { label: '🏠 Property Impact',   content: a.aiAnalysis.propertyImpact },
-                      { label: '🇱🇰 SL Implication',  content: a.aiAnalysis.sriLankaImplication },
-                    ].map((item, j) => (
+                      { label: '📋 What Happened',    content: a.aiAnalysis.whatHappened },
+                      { label: '💡 Why It Matters',   content: a.aiAnalysis.whyItMatters },
+                      { label: '🏠 Property Impact',  content: a.aiAnalysis.propertyImpact },
+                      { label: '🇱🇰 SL Implication', content: a.aiAnalysis.sriLankaImplication },
+                    ].filter(item => item.content).map((item, j) => (
                       <div key={j} className={`${CARD2} rounded-lg p-3`}>
                         <p className="text-[10px] font-semibold text-gray-400 mb-1">{item.label}</p>
                         <p className="text-xs text-gray-300 leading-relaxed">{item.content}</p>
                       </div>
                     ))}
+
+                    {/* On-demand AI analysis button */}
+                    {needsAnalysis(a) && (
+                      <div className="col-span-full">
+                        <button
+                          onClick={() => analyzeArticle(a)}
+                          disabled={analyzingId === a.id}
+                          className="flex items-center gap-2 px-4 py-2 bg-[#4ade80]/10 hover:bg-[#4ade80]/20 border border-[#4ade80]/30 rounded-lg text-[#4ade80] text-xs font-semibold transition-all disabled:opacity-50"
+                        >
+                          {analyzingId === a.id
+                            ? <><Loader2 size={12} className="animate-spin" /> Analysing with AI...</>
+                            : <><Brain size={12} /> Generate AI Analysis</>}
+                        </button>
+                      </div>
+                    )}
+
                     {a.url && (
                       <div className="col-span-full">
                         <a href={a.url} target="_blank" rel="noopener noreferrer"
@@ -773,8 +890,10 @@ export default function Dashboard({ activeSection }: { activeSection: string }) 
               <button key={h.id} onClick={() => { setSelectedHistory(h); setShowHistory(false); }}
                 className={`w-full ${CARD} rounded-lg p-3 text-left hover:border-[#4ade80]/30 transition-all`}>
                 <div className="flex justify-between items-start mb-1">
-                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${h.source === 'gnews' ? 'bg-[#4ade80]/20 text-[#4ade80]' : 'bg-gray-700 text-gray-400'}`}>
-                    {h.source === 'gnews' ? 'LIVE' : 'MOCK'}
+                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                    h.source === 'firecrawl' || h.source === 'gnews' ? 'bg-[#4ade80]/20 text-[#4ade80]' : 'bg-gray-700 text-gray-400'
+                  }`}>
+                    {h.source === 'firecrawl' || h.source === 'gnews' ? 'LIVE' : 'MOCK'}
                   </span>
                   <span className="text-[10px] text-gray-600">{h.articleCount} articles</span>
                 </div>
