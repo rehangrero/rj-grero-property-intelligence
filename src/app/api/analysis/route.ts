@@ -44,7 +44,18 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const analysisPrompt = `Analyze this property news: ${headline}. ${summary}. Explain: 1) What happened 2) Why it matters for property markets 3) Potential impact on global real estate 4) Possible implications for Sri Lanka real estate market. Be concise and professional.`;
+    const analysisPrompt = `Analyze this property news article and respond with a JSON object only (no markdown, no extra text):
+Headline: ${headline}
+Summary: ${summary}
+
+Return exactly this JSON structure:
+{
+  "whatHappened": "...",
+  "whyItMatters": "...",
+  "propertyImpact": "...",
+  "sriLankaImplication": "..."
+}
+Each field should be 1-2 concise sentences.`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -53,7 +64,7 @@ export async function POST(request: NextRequest) {
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
@@ -81,8 +92,19 @@ export async function POST(request: NextRequest) {
     const data = await response.json();
     const responseText = data.choices?.[0]?.message?.content || '';
 
-    // Parse the response into structured format
-    const analysis = parseAnalysis(responseText, headline);
+    // Parse JSON response; fall back to text-based parsing if needed
+    let analysis: AnalysisResponse;
+    try {
+      const parsed = JSON.parse(responseText.trim());
+      analysis = {
+        whatHappened: parsed.whatHappened || '',
+        whyItMatters: parsed.whyItMatters || '',
+        propertyImpact: parsed.propertyImpact || '',
+        sriLankaImplication: parsed.sriLankaImplication || '',
+      };
+    } catch {
+      analysis = parseAnalysis(responseText, headline);
+    }
 
     return NextResponse.json({
       success: true,
@@ -99,18 +121,48 @@ export async function POST(request: NextRequest) {
 }
 
 function parseAnalysis(responseText: string, headline: string): AnalysisResponse {
-  // Attempt to extract structured information from OpenAI response
-  const sections = responseText.split(/\d+\)\s+/);
+  // Extract each labelled section using keyword anchors, tolerating varied formatting
+  const extract = (label: string, nextLabel?: string): string => {
+    // Match the label followed by any separator (colon, dash, newline, digits+punct)
+    const start = new RegExp(`${label}[:\\-\\s]*`, 'i');
+    const startMatch = responseText.search(start);
+    if (startMatch === -1) return '';
 
-  const whatHappened = sections[1]?.split('\n')[0]?.trim() || 'Property market development analyzed.';
-  const whyItMatters = sections[2]?.split('\n')[0]?.trim() || 'Important for market understanding.';
-  const propertyImpact = sections[3]?.split('\n')[0]?.trim() || 'Will affect property market dynamics.';
-  const sriLankaImplication = sections[4]?.trim() || 'May have implications for local market.';
+    const afterLabel = responseText.slice(startMatch).replace(start, '');
 
+    if (nextLabel) {
+      const end = new RegExp(`${nextLabel}[:\\-\\s]*`, 'i');
+      const endMatch = afterLabel.search(end);
+      return endMatch !== -1 ? afterLabel.slice(0, endMatch).trim() : afterLabel.split('\n\n')[0].trim();
+    }
+    return afterLabel.split('\n\n')[0].trim();
+  };
+
+  const whatHappened =
+    extract('What Happened', 'Why It Matters') ||
+    extract('1[.)\\s]', '2[.)\\s]') ||
+    'Property market development analyzed.';
+
+  const whyItMatters =
+    extract('Why It Matters', 'Potential Impact|Property Impact') ||
+    extract('2[.)\\s]', '3[.)\\s]') ||
+    'Important for market understanding.';
+
+  const propertyImpact =
+    extract('Potential Impact|Property Impact', 'Sri Lanka|Implications') ||
+    extract('3[.)\\s]', '4[.)\\s]') ||
+    'Will affect property market dynamics.';
+
+  const sriLankaImplication =
+    extract('Sri Lanka|Implications') ||
+    extract('4[.)\\s]') ||
+    'May have implications for local market.';
+
+  // Final fallback: if nothing was parsed, use generic
   return {
-    whatHappened,
-    whyItMatters,
-    propertyImpact,
-    sriLankaImplication,
+    whatHappened: whatHappened || `The article discusses: "${headline}".`,
+    whyItMatters: whyItMatters || 'Property market developments affect investment decisions globally.',
+    propertyImpact: propertyImpact || 'This news may influence property valuations and rental yields.',
+    sriLankaImplication: sriLankaImplication || 'Global trends can indirectly affect Sri Lanka through capital flows.',
   };
 }

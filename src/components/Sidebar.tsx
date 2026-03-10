@@ -109,7 +109,7 @@ export default function Sidebar({ activeSection, onNavigate }: SidebarProps) {
           </div>
           <div className="flex justify-between text-[11px]">
             <span className="text-gray-500">Policy Rate</span>
-            <span className="text-[#4ade80] font-medium">8.0%</span>
+            <span className="text-[#4ade80] font-medium">9.5%</span>
           </div>
         </div>
       </div>

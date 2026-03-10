@@ -579,8 +579,6 @@ export const risks = [
   },
 ];
 
-export const globalSentiment = 68;
-
 export const dailySummary = {
   date: new Date("2026-03-08"),
   keySignals: [

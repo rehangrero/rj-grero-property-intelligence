@@ -15,10 +15,8 @@ export async function GET() {
     }
 
     const series = ['FEDFUNDS', 'BOEBR', 'ECBMR'];
-    const ratesData: Record<string, number | null> = {};
 
-    // Fetch data for each series
-    for (const seriesId of series) {
+    const fetchSeries = async (seriesId: string): Promise<number | null> => {
       try {
         const url = new URL('https://api.stlouisfed.org/fred/series/observations');
         url.searchParams.append('series_id', seriesId);
@@ -30,18 +28,20 @@ export async function GET() {
 
         if (!response.ok) {
           console.warn(`FRED API error for ${seriesId}: ${response.status}`);
-          ratesData[seriesId] = null;
-          continue;
+          return null;
         }
 
         const data = await response.json();
         const observation = data.observations?.[0];
-        ratesData[seriesId] = observation ? parseFloat(observation.value) : null;
+        return observation ? parseFloat(observation.value) : null;
       } catch (error) {
         console.error(`Error fetching ${seriesId}:`, error);
-        ratesData[seriesId] = null;
+        return null;
       }
-    }
+    };
+
+    const [fedfunds, boebr, ecbmr] = await Promise.all(series.map(fetchSeries));
+    const ratesData = { FEDFUNDS: fedfunds, BOEBR: boebr, ECBMR: ecbmr };
 
     return NextResponse.json({
       success: true,

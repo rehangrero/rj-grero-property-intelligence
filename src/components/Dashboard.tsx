@@ -143,10 +143,8 @@ export default function Dashboard({ activeSection }: { activeSection: string }) 
     if (!activeSection || activeSection === 'dashboard') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
-      // colombo-map section is embedded inside the district area
-      const targetId = activeSection === 'colombo-map' ? 'colombo-map' : activeSection;
       setTimeout(() => {
-        const el = document.getElementById(targetId);
+        const el = document.getElementById(activeSection);
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 50);
     }
@@ -192,7 +190,7 @@ export default function Dashboard({ activeSection }: { activeSection: string }) 
     .sort((a, b) => b.priceUSD - a.priceUSD);
 
   // Chart data derived from real mockData
-  const interestRateChart = interestRates.map(r => ({ name: r.country.substring(0, 4), rate: r.rate }));
+  const interestRateChart = interestRates.map(r => ({ name: r.currency, rate: r.rate }));
   const tourismChart = sriLankaData.tourismArrivals.slice(0, 6).reverse().map(t => ({ month: t.month.substring(0, 3), arrivals: Math.round(t.arrivals / 1000) }));
   const mortgageChart = sriLankaData.mortgageRates.slice(0, 6).reverse().map(m => ({ month: m.month.substring(0, 3), rate: m.rate }));
   const globalSentimentChart = marketMapData.map(m => ({
@@ -706,7 +704,7 @@ export default function Dashboard({ activeSection }: { activeSection: string }) 
 
         <div className="space-y-3">
           {displayNews.map((article, i) => {
-            const a = article as NewsArticle;
+            const a = article;
             const isExpanded = expandedNews === a.id;
             return (
               <div key={a.id ?? i} className={`${CARD} rounded-xl p-4`}>
